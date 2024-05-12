@@ -1,0 +1,47 @@
+server:
+  port: 8085
+  address: 0.0.0.0
+  servlet:
+    encoding:
+      charset: utf-8
+      enabled: true
+      force: true
+
+spring:
+  redis:
+    host: ${redis-host:127.0.0.1}
+    port: ${redis-port:6379}
+    password: 123456
+    timeout: 1000
+    lettuce:
+      pool:
+        minIdle: 30
+        maxIdle: 500
+        maxWait: 10000
+        maxActive: 500
+  main:
+    allow-bean-definition-overriding: true
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowCredentials: true
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+        add-to-simple-url-handler-mapping: true
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true # 服务名小写
+      routes:
+
+
+#JWT 双token
+jwt:
+  accessTokenHeader: ACCESSTOKEN
+  refreshTokenHeader: REFRESHTOKEN
+  accessTokenExpire: 18000000 #（秒）30分钟
+  refreshTokenExpire: 1728000000 #（秒）2天
+  secret: abcdefghabcdefghabcdefghabcdefgh
