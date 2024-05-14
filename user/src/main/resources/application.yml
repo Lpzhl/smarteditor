@@ -84,26 +84,6 @@ dubbo:
     username: ${nacos-username:nacos}
     password: ${nacos-password:nacos}
 
-# 接口文档配置
-knife4j:
-  # 是否开启knife4j插件
-  enable: true
-  # 配置openapi接口文档
-  openapi:
-    # 接口文档标题
-    title: "接口文档"
-    # 接口文档版本
-    version: 1.0
-    # 接口文档分组
-    group:
-      # 分组名称
-      default:
-        # 指定api文档的生成方式，这里是package方式
-        api-rule: package
-        # 指定api文档中包含的资源，这里是com.example.demo包下的所有类
-        api-rule-resources:
-          # com.example.demo包
-          hope.smarteditor.user.controller
 
   # todo 需替换配置，然后取消注释
 #  elasticsearch:
