@@ -1,4 +1,4 @@
-package hope.smarteditor.gateway;
+package hope.smarteditor.gateway.filter;
 
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
@@ -17,14 +17,19 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
 
 /**
  * 全局过滤
  * @author lzh
  */
+
+
 @Slf4j
 @Component
 public class CustomGlobalFilter implements GlobalFilter, Ordered {
@@ -35,7 +40,15 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String method = request.getMethod().toString();
         log.info("请求唯一标识：" + request.getId());
-        log.info("请求路径：" +request.getPath());
+        String encodedPath  = request.getPath().toString();
+        try {
+            // 解码 URL
+            String decodedPath = URLDecoder.decode(encodedPath, "UTF-8");
+            log.info("原始路径: " + decodedPath);
+        } catch (UnsupportedEncodingException e) {
+            System.err.println("URL 解码失败: " + e.getMessage());
+        }
+
         log.info("请求方法：" + method);
         log.info("请求参数：" + request.getQueryParams());
         String sourceAddress = request.getLocalAddress().getHostString();
@@ -48,13 +61,15 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
 
     }
 
-    /**
+/**
      * 处理响应
      *
      * @param exchange
      * @param chain
      * @return
      */
+
+
     public Mono<Void> handleResponse(ServerWebExchange exchange, GatewayFilterChain chain) {
         try {
             ServerHttpResponse originalResponse = exchange.getResponse();
@@ -113,7 +128,7 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -1;
+        return 0;
     }
 
     public Mono<Void> handleNoAuth(ServerHttpResponse response) {
@@ -126,3 +141,4 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
         return response.setComplete();
     }
 }
+

@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class AuthInterceptor {
 
 /*    @Resource
-    private UserService userService;*/
+    private hope.smarteditor.user.hope.smarteditor.user.service.UserService userService;*/
 
     /**
      * 执行拦截

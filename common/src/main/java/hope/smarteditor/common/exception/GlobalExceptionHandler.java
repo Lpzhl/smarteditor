@@ -2,8 +2,7 @@ package hope.smarteditor.common.exception;
 
 
 import hope.smarteditor.common.constant.ErrorCode;
-import hope.smarteditor.common.result.BaseResponse;
-import hope.smarteditor.common.utils.ResultUtils;
+import hope.smarteditor.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -19,15 +18,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public BaseResponse businessExceptionHandler(BusinessException e) {
+    public Result businessExceptionHandler(BusinessException e) {
         log.error("businessException: " + e.getMessage(), e);
-        return ResultUtils.error(e.getCode(), e.getMessage());
+        return Result.error(e.getMessage());
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public BaseResponse runtimeExceptionHandler(RuntimeException e) {
+    public Result runtimeExceptionHandler(RuntimeException e) {
         log.info("测试");
-        return ResultUtils.error(ErrorCode.SYSTEM_ERROR, e.getMessage());
+        return Result.error(e.getMessage());
     }
 }
 

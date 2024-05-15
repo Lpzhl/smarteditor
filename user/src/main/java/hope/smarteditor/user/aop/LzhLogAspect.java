@@ -35,7 +35,7 @@ public class LzhLogAspect {
         HttpServletRequest request = requestAttributes.getRequest();
 
         String methodName = joinPoint.getSignature().getName();
-        log.info("========================================= Method " + methodName + "() begin=========================================");
+        log.info("===================== Method " + methodName + "() begin==============");
         // 执行时间
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date d= new Date();
@@ -57,6 +57,6 @@ public class LzhLogAspect {
     @After("LzhLogAspect()")
     public void afterPkhLog(JoinPoint joinPoint) {
         String methodName = joinPoint.getSignature().getName();
-        log.info("========================================= Method " + methodName + "() End =========================================");
+        log.info("======================== Method " + methodName + "() End ==========================");
     }
 }
