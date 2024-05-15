@@ -87,7 +87,7 @@ public class UserController {
      * 分页查询所有数据
      *
      * @param page 分页对象
-     * @param user 查询实体
+     * @param userVO 查询实体
      * @return 所有数据
      */
     @GetMapping
