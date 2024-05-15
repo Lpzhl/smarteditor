@@ -60,6 +60,36 @@
                 <version>1.2.6</version>
             </dependency>
 
+
+        <!--springweb-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>2.5.4</version>
+        </dependency>
+        <!--text-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--bootstrap-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.spring</groupId>
+            <artifactId>spring-context-support</artifactId>
+            <version>1.0.11</version>
+        </dependency>
+
+        <!--druid-->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-starter</artifactId>
+            <version>1.2.6</version>
+        </dependency>
         <!--mysql-->
             <dependency>
                 <groupId>mysql</groupId>
@@ -67,12 +97,22 @@
                 <scope>runtime</scope>
             </dependency>
 
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <!--jdbc-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
-
+        <!-- mybatis-->
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>2.1.4</version>
+        </dependency>
         <!--mybatis-plus-->
         <dependency>
             <groupId>com.baomidou</groupId>
@@ -84,15 +124,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <version>2.5.4</version>
         </dependency>
 
-       <!-- redis-->
+        <!-- redis-->
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>3.7.0</version>
         </dependency>
 
+        <!--nacos注册中心-->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-spring-boot-starter</artifactId>
@@ -102,19 +144,12 @@
         <!--配置中心-->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
         </dependency>
-
-        <!--bootstrap-->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-bootstrap</artifactId>
-        </dependency>
-
-        <!--nacos服务注册发现-->
+        <!--nacos配置中心-->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
         </dependency>
 
         <dependency>
@@ -123,36 +158,32 @@
             <version>3.0.6</version>
         </dependency>
 
+        <!--dubbo配置-->
         <dependency>
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo-spring-boot-starter</artifactId>
             <version>3.0.6</version>
         </dependency>
-
         <dependency>
-            <groupId>com.alibaba.spring</groupId>
-            <artifactId>spring-context-support</artifactId>
-            <version>1.0.11</version>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-registry-nacos</artifactId>
+            <version>3.0.6</version>
         </dependency>
-
         <dependency>
             <groupId>com.alibaba.nacos</groupId>
             <artifactId>nacos-client</artifactId>
             <version>2.0.4</version>
         </dependency>
 
-       <!-- mybatis-->
+        <!--可以实现对Swagger API文档的生成和访问功能。-->
         <dependency>
-            <groupId>org.mybatis.spring.boot</groupId>
-            <artifactId>mybatis-spring-boot-starter</artifactId>
-            <version>2.1.4</version>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-spring-boot-starter</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+
     </dependencies>
+
+
     <dependencyManagement>
         <dependencies>
             <dependency>
