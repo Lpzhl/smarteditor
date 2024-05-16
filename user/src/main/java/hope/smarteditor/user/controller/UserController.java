@@ -75,6 +75,7 @@ public class UserController {
         claims.put(JwtClaimsConstant.USER_ID,user.getId());
         String token = JwtUtil.createJWT(jwtProperties.getSecretKey(), jwtProperties.getTtl(), claims);
 
+        // todo 还要实现将token保存到redis里面去
         UserLoginVO userLoginVO = UserLoginVO.builder()
                 .id(user.getId())
                 .openid(String.valueOf(user.getId()))
