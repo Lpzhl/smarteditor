@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: document-service  # 服务名称
+  profiles:
+    active: dev #开发环境，这里是dev
+  cloud:
+    nacos:
+      server-addr: ${nacos-addr:127.0.0.1:8848} # Nacos地址
+      config:
+        file-extension: yaml # 文件后缀名
+        username: nacos
+        password: nacos
+        server-addr: ${nacos-addr:127.0.0.1:8848}
+        name: user
+      discovery:
+        ephemeral: true

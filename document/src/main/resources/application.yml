@@ -1,3 +1,105 @@
-# 应用服务 WEB 访问端口
-server.port=8080
+server:
+  # 设置端口号
+  port: 8086
+  # 设置IP地址
+  address: 0.0.0.0
+spring:
+  # 设置日期格式
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    # 设置序列化
+    serialization:
+      write-dates-as-timestamps: false
+  # 设置MVC
+  mvc:
+    pathmatch:
+      # 设置匹配策略
+      matching-strategy: ant_path_matcher
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 100MB
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://${mysql-addr:8.130.128.14:3306}/smarteditor?useSSL=false&amp&serverTimezone=UTC
+      username: ${mysql-username:root}
+      password: ${mysql-password:123456}
+  redis:
+    host: ${redis-host:127.0.0.1}
+    port: ${redis-port:6379}
+    timeout: 1000
+    password: 123456
+    lettuce:
+      pool:
+        minIdle: 30
+        maxIdle: 500
+        maxWait: 10000
+        maxActive: 500
+
+mybatis-plus:
+  # 设置MyBatis-Plus配置
+  configuration:
+    # 设置是否将下划线命名转换为驼峰命名
+    map-underscore-to-camel-case: true
+    # 设置日志实现类
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  # 设置全局配置
+  global-config:
+    # 设置数据库配置
+    db-config:
+      logic-delete-field: isDelete # 全局逻辑删除的实体字段名
+      logic-delete-value: 1 # 逻辑已删除值（默认为 1）
+      logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
+
+dubbo:
+  consumer:
+    timeout: 30000
+    retries: 0
+  protocol:
+    id: dubbo
+    name: dubbo
+    port: -1
+  scan:
+    basePackages:
+  application:
+    # 禁用QOS同一台机器可能会有端口冲突现象
+    qos-enable: false
+    qos-accept-foreign-ip: false
+      #可选值 interface、instance、all，默认是 interface，即只注册接口级地址
+      #    register-mode: all
+      #只消费应用级
+      #    service-discovery:
+      # FORCE_INTERFACE，只消费接口级地址，如无地址则报错，单订阅 2.x 地址
+    # APPLICATION_FIRST，智能决策接口级/应用级地址，双订阅
+    # FORCE_APPLICATION，只消费应用级地址，如无地址则报错，单订阅 3.x 地址
+    #      migration: APPLICATION_FIRST
+  registry:
+    address: nacos:${nacos-addr:127.0.0.1:8848}
+    username: ${nacos-username:nacos}
+    password: ${nacos-password:nacos}
+
+
+  # todo 需替换配置，然后取消注释
+#  elasticsearch:
+#    uris: http://localhost:9200
+#    username: root
+#    password: 123456
+
+hope:
+  jwt:
+    # 设置jwt签名加密时使用的秘钥
+    secret-key: lzsdash
+    # 设置jwt过期时间
+    ttl: 323423000
+    # 设置前端传递过来的令牌名称
+    token-name: token
+
+minio:
+  endpoint: http://8.130.128.14:9000
+  accessKey: minioadmin
+  secretKey: minioadmin
+  bucket-name: myfile
 
