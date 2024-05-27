@@ -1,21 +1,21 @@
 package hope.smarteditor.common.model.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
-
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 /**
- * @TableName document
+ * @TableName template_document
  */
-@TableName(value ="document")
+@TableName(value ="template_document")
 @Data
-public class Document implements Serializable {
-    @TableId(type = IdType.AUTO)
+public class TemplateDocument implements Serializable {
     private Long id;
 
     private Long userId;
@@ -31,11 +31,6 @@ public class Document implements Serializable {
     private String label;
 
     private Integer status;
-    @TableLogic
-    private Integer isDeleted;
-
-    private Integer likeCount;
-
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
