@@ -1,12 +1,15 @@
 package hope.smarteditor.document.controller;
 
 
+import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
+import hope.smarteditor.common.model.dto.DocumentpermissionsDTO;
 import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.service.DocumentService;
+import hope.smarteditor.document.service.DocumentpermissionsService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +30,9 @@ public class DocumentMange {
 
     @Autowired
     private DocumentService documentService;
+
+    @Autowired
+    private DocumentpermissionsService documentpermissionsService;
 
     /**
      * 将在线富文本编写的文档信息上传到数据库中保存
@@ -56,8 +62,8 @@ public class DocumentMange {
             Document document = documentService.updateDocument(documentId, documentUpdateDTO);
             return Result.success(document);
         } catch (Exception e) {
-            log.error("更新文档失败", e);
-            return Result.error("更新文档失败");
+            log.error(ErrorCode.UPDATE_FILE_ERROR.getMessage(), e);
+            return Result.error(ErrorCode.UPDATE_FILE_ERROR.getMessage());
         }
     }
 
@@ -85,5 +91,30 @@ public class DocumentMange {
         }
     }
 
+    /**
+     * 设置文档的对外权限
+     * @param documentId
+     * @return
+     */
+    @PutMapping("/setVisibility/{documentId}")
+    @LzhLog
+    @ApiOperation("设置文档对外权限")
+    public  Result<Document> setDocumentVisibility(@PathVariable Long documentId) {
+        documentService.setDocumentVisibility(documentId);
+        return Result.success("设置成功");
+    }
+
+    /**
+     * 设置文档对指定用户的权限
+     * @param documentpermissionsDTO
+     * @return
+     */
+    @PostMapping("setUserAbility")
+    @LzhLog
+    @ApiOperation("设置文档对指定用户的权限")
+    public Result setUserAbility(@RequestBody DocumentpermissionsDTO documentpermissionsDTO) {
+        documentpermissionsService.setUserAbility(documentpermissionsDTO);
+        return Result.success("设置成功");
+    }
 
 }
