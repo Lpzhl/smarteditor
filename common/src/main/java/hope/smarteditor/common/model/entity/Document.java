@@ -36,6 +36,8 @@ public class Document implements Serializable {
 
     private Integer likeCount;
 
+    private Integer visibility;
+
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
