@@ -26,4 +26,5 @@ public interface DocumentService extends IService<Document> {
     Document updateDocument(Long documentId, DocumentUpdateDTO documentUpdateDTO);
 
 
+    void setDocumentVisibility(Long documentId);
 }

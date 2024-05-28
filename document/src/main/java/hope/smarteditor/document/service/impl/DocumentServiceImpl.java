@@ -1,10 +1,16 @@
 package hope.smarteditor.document.service.impl;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import hope.smarteditor.common.constant.ErrorCode;
+import hope.smarteditor.common.exception.BusinessException;
+import hope.smarteditor.common.exception.GlobalExceptionHandler;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.entity.Document;
+import hope.smarteditor.common.model.entity.Documentpermissions;
+import hope.smarteditor.document.mapper.DocumentpermissionsMapper;
 import hope.smarteditor.document.service.DocumentService;
 import hope.smarteditor.document.mapper.DocumentMapper;
 import io.minio.*;
@@ -15,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -35,6 +42,9 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     @Autowired
     private  DocumentMapper documentMapper;
+
+    @Resource
+    private DocumentpermissionsMapper documentpermissionsMapper;
 
     @Value("${minio.bucket-name}")
     private String bucketName;
@@ -97,7 +107,18 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
         int insert = documentMapper.insert(document);
 
+        if(insert == 0){
+            throw new BusinessException(ErrorCode.SAVE_FILE_ERROR);
+        }
+
         Document savedDocument = documentMapper.selectById(document.getId());
+
+        //设置文档权限
+        Documentpermissions documentpermissions = new Documentpermissions();
+        documentpermissions.setDocumentId(document.getId());
+        documentpermissions.setUserId(document.getUserId());
+        documentpermissions.setPermissionId(1L); //设置为创建者 权限为可编辑
+        documentpermissionsMapper.insert(documentpermissions);
 
         return savedDocument;
     }
@@ -139,6 +160,28 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         documentMapper.updateById(document);
 
         return document;
+    }
+
+    @Override
+    public void setDocumentVisibility(Long documentId) {
+        //1. 查询文档对象
+        QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("id", documentId);
+        Document document = documentMapper.selectOne(queryWrapper);
+
+        //2. 获取当前文档的可见性状态
+        Integer visibility = document.getVisibility();
+
+        //3. 根据当前可见性状态，进行设置
+        if(visibility == 1) {
+            //如果当前文档是公开的，则将其设置为私有
+            document.setVisibility(0);
+        } else if (visibility == 0) {
+            //如果当前文档是私有的，则将其设置为公开
+            document.setVisibility(1);
+        }
+        //4. 更新文档对象
+        documentMapper.updateById(document);
     }
 
 
