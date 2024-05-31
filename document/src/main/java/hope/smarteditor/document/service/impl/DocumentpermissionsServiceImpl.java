@@ -1,16 +1,22 @@
 package hope.smarteditor.document.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.exception.BusinessException;
 import hope.smarteditor.common.model.dto.DocumentpermissionsDTO;
 import hope.smarteditor.common.model.entity.Documentpermissions;
+import hope.smarteditor.common.model.entity.Permissions;
+import hope.smarteditor.document.mapper.PermissionsMapper;
 import hope.smarteditor.document.service.DocumentpermissionsService;
 import hope.smarteditor.document.mapper.DocumentpermissionsMapper;
+import hope.smarteditor.document.service.PermissionsService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
 * @author LoveF
@@ -23,6 +29,8 @@ public class DocumentpermissionsServiceImpl extends ServiceImpl<Documentpermissi
 
     @Resource
     private DocumentpermissionsMapper documentpermissionsMapper;
+    @Resource
+    private PermissionsMapper permissionsMapper;
 
     @Override
     public boolean setUserAbility(DocumentpermissionsDTO documentpermissionsDTO) {
@@ -37,6 +45,21 @@ public class DocumentpermissionsServiceImpl extends ServiceImpl<Documentpermissi
            throw new BusinessException(ErrorCode.SET_USER_VISBILITY_ERROR);
         }
     }
+
+    @Override
+    public List<Permissions> getPermissionsForUserAndDocument(Long userId, Long documentId) {
+        QueryWrapper<Documentpermissions> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_id", userId).eq("document_id", documentId);
+        List<Long> permissionIds = documentpermissionsMapper.selectList(wrapper).stream()
+                .map(Documentpermissions::getPermissionId)
+                .collect(Collectors.toList());
+
+        QueryWrapper<Permissions> permissionsWrapper = new QueryWrapper<>();
+        permissionsWrapper.in("permission_id", permissionIds);
+        return permissionsMapper.selectList(permissionsWrapper);
+    }
+
+
 }
 
 
