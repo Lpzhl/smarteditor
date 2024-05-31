@@ -8,6 +8,7 @@ import hope.smarteditor.common.model.dto.DocumentpermissionsDTO;
 import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
+import hope.smarteditor.document.annotation.PermissionCheck;
 import hope.smarteditor.document.service.DocumentService;
 import hope.smarteditor.document.service.DocumentpermissionsService;
 import io.swagger.annotations.Api;
@@ -54,9 +55,11 @@ public class DocumentMange {
      * @param documentUpdateDTO 文档更新数据传输对象
      * @return 更新结果
      */
+
     @ApiOperation("更新文档信息")
     @PutMapping("/update/{documentId}")
     @LzhLog
+    @PermissionCheck(value = {"可管理", "可编辑"})
     public Result<Document> updateDocument(@PathVariable Long documentId, @RequestBody DocumentUpdateDTO documentUpdateDTO) {
         try {
             Document document = documentService.updateDocument(documentId, documentUpdateDTO);
@@ -67,12 +70,14 @@ public class DocumentMange {
         }
     }
 
+
     /**
      * 删除文档
      *
      * @param documentId 文档ID
      * @return 删除结果
      */
+    @PermissionCheck(value = {"可管理", "可编辑"})
     @ApiOperation("删除文档")
     @DeleteMapping("/delete/{documentId}")
     @LzhLog
@@ -96,6 +101,7 @@ public class DocumentMange {
      * @param documentId
      * @return
      */
+    @PermissionCheck(value = {"可管理"})
     @PutMapping("/setVisibility/{documentId}")
     @LzhLog
     @ApiOperation("设置文档对外权限")
@@ -109,6 +115,7 @@ public class DocumentMange {
      * @param documentpermissionsDTO
      * @return
      */
+    @PermissionCheck(value = {"可管理"})
     @PostMapping("setUserAbility")
     @LzhLog
     @ApiOperation("设置文档对指定用户的权限")
