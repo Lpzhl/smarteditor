@@ -13,6 +13,8 @@ import lombok.Data;
 @TableName(value ="documentpermissions")
 @Data
 public class Documentpermissions implements Serializable {
+
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long documentId;
