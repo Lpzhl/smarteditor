@@ -18,12 +18,13 @@
             <result property="isDeleted" column="id_deleted" jdbcType="INTEGER"/>
             <result property="likeCount" column="like_count" jdbcType="INTEGER"/>
             <result property="visibility" column="visibility" jdbcType="INTEGER"/>
+            <result property="deletedTime" column="deleted_time" jdbcType="TIMESTAMP"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id,user_id,name,
         content,summary,type,
         label,status,create_time,
-        update_time,id_deleted,like_count,visibility
+        update_time,id_deleted,like_count,visibility,deleted_time
     </sql>
 </mapper>
