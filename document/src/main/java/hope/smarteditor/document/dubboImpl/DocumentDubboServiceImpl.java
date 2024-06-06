@@ -11,11 +11,14 @@ import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.mapper.*;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * author lzh
@@ -36,19 +39,58 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
     @Resource
     private UserDocumentLikeMapper userDocumentLikeMapper;
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
     @Override
     public List<Document> getUserAllDocumentInfo(String userId) {
-        QueryWrapper <Document> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("user_id",userId);
-        return documentMapper.selectList(queryWrapper);
+        String cacheKey = "user:" + userId + ":documents";
+
+        // 尝试从Redis缓存中获取文档信息
+        List<Document> documents = (List<Document>) redisTemplate.opsForValue().get(cacheKey);
+
+        if (documents == null) {
+            // 如果缓存中不存在文档信息，则从数据库中获取
+            QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("user_id", userId);
+            documents = documentMapper.selectList(queryWrapper);
+
+            if (documents != null && !documents.isEmpty()) {
+                // 将获取到的文档信息存储到Redis缓存中，并设置过期时间
+                redisTemplate.opsForValue().set(cacheKey, documents);
+                redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
+            }
+        }
+
+        return documents;
     }
 
     @Override
     public Document getDocumentById(Long documentId) {
-        QueryWrapper <Document> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("id",documentId);
-        return documentMapper.selectOne(queryWrapper);
+        String cacheKey = "document:" + documentId;
+
+        // 尝试从Redis缓存中获取文档
+        Document document = (Document) redisTemplate.opsForValue().get(cacheKey);
+
+        if (document != null) {
+            // 如果缓存中存在该文档信息，则直接返回
+            return document;
+        } else {
+            // 如果缓存中不存在该文档信息，则从数据库中获取
+            QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("id", documentId);
+            document = documentMapper.selectOne(queryWrapper);
+
+            if (document != null) {
+                // 将获取到的文档信息存储到Redis缓存中，并设置过期时间
+                redisTemplate.opsForValue().set(cacheKey, document);
+                redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
+            }
+
+            return document;
+        }
     }
+
 
     @Override
     public List<FavoriteDocumentVO> getUserFavoriteDocuments(Long userId) {
@@ -61,16 +103,28 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
         for (FavoriteDocument favoriteDocument : favoriteDocuments) {
             FavoriteDocumentVO favoriteDocumentVO = new FavoriteDocumentVO();
             BeanUtils.copyProperties(favoriteDocument, favoriteDocumentVO);
-            System.out.println("favoriteDocument = " + favoriteDocument.getDocumentId());
-            Document document = documentMapper.selectById(favoriteDocument.getDocumentId());
-            System.out.println("document = " + document);
-            favoriteDocumentVO.setDocument(document);
 
+            // 先尝试从Redis缓存中获取文档信息
+            String cacheKey = "document:" + favoriteDocument.getDocumentId();
+            Document document = (Document) redisTemplate.opsForValue().get(cacheKey);
+
+            if (document == null) {
+                // 如果缓存中不存在该文档信息，则从数据库中获取
+                document = documentMapper.selectById(favoriteDocument.getDocumentId());
+                if (document != null) {
+                    // 将获取到的文档信息存储到Redis缓存中，并设置过期时间
+                    redisTemplate.opsForValue().set(cacheKey, document);
+                    redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
+                }
+            }
+
+            favoriteDocumentVO.setDocument(document);
             favoriteDocumentVOList.add(favoriteDocumentVO);
         }
 
         return favoriteDocumentVOList;
     }
+
 
     @Override
     public boolean toggleFavoriteDocument(FavoriteDocumentDTO favoriteDocumentDTO) {

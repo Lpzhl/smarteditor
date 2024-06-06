@@ -45,6 +45,7 @@ public class DocumentMange {
     @PostMapping("/upload")
     @LzhLog
     public Result<Document> upload(@RequestBody DocumentUploadDTO documentUploadDTO) throws Exception{
+
         return Result.success(documentService.saveDocument(documentUploadDTO));
     }
 
