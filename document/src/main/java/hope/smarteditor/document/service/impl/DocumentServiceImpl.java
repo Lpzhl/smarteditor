@@ -3,6 +3,7 @@ package hope.smarteditor.document.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.exception.BusinessException;
 import hope.smarteditor.common.exception.GlobalExceptionHandler;
@@ -27,8 +28,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
 * @author LoveF
@@ -53,6 +56,9 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     @Value("${minio.bucket-name}")
     private String bucketName;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Override
     public String uploadFile(MultipartFile file) throws Exception{
@@ -127,15 +133,24 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         documentpermissions.setPermissionId(1L); // 设置为创建者，权限为可编辑
         documentpermissionsMapper.insert(documentpermissions);
 
+        // 更新cacheKey1
+        String cacheKey1 = "user:" + document.getUserId() + ":documents";
+        List<Document> userDocuments = (List<Document>) redisTemplate.opsForValue().get(cacheKey1);
+        if (userDocuments != null) {
+            userDocuments.add(savedDocument);
+            redisTemplate.opsForValue().set(cacheKey1, userDocuments);
+            redisTemplate.expire(cacheKey1, 7, TimeUnit.DAYS);
+        }
+
         // 保存到Redis中，以文档的ID作为key
         String cacheKey = "document:" + document.getId();
         redisTemplate.opsForValue().set(cacheKey, savedDocument);
         // 设置缓存过期时间，例如1小时
         redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
 
-
         return savedDocument;
     }
+
 
 
     /**
@@ -146,7 +161,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
      */
     @Override
     public Document updateDocument(Long documentId, DocumentUpdateDTO documentUpdateDTO) {
-        Document document =documentMapper.selectById(documentId);
+        Document document = documentMapper.selectById(documentId);
         if (document == null) {
             return null;
         }
@@ -161,9 +176,6 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         if (documentUpdateDTO.getSummary() != null) {
             document.setSummary(documentUpdateDTO.getSummary());
         }
-        if (documentUpdateDTO.getName() != null) {
-            document.setName(documentUpdateDTO.getName());
-        }
         if (documentUpdateDTO.getType() != null) {
             document.setType(documentUpdateDTO.getType());
         }
@@ -174,32 +186,69 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         document.setUpdateTime(new Date());
         documentMapper.updateById(document);
 
-        // 更新Redis中缓存的信息
-        String cacheKey = "document:" + documentId;
-        Boolean hasKey = redisTemplate.hasKey(cacheKey);
-        if (hasKey != null && hasKey) {
-            Document updatedDocument = documentMapper.selectById(documentId);
-            redisTemplate.opsForValue().set(cacheKey, updatedDocument);
-            redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
-        } else {
-            redisTemplate.opsForValue().set(cacheKey, document);
+        // 更新cacheKey1
+        String cacheKey1 = "user:" + document.getUserId() + ":documents";
+        List<Object> userDocuments = (List<Object>) redisTemplate.opsForValue().get(cacheKey1);
+
+        if (userDocuments != null) {
+            List<Document> documentList = userDocuments.stream()
+                    .map(doc -> objectMapper.convertValue(doc, Document.class))
+                    .collect(Collectors.toList());
+            // 更新文档列表中的文档信息
+            for (int i = 0; i < documentList.size(); i++) {
+                if (documentList.get(i).getId().equals(documentId)) {
+                    documentList.set(i, document);
+                    break;
+                }
+            }
+
+            redisTemplate.opsForValue().set(cacheKey1, documentList);
+            redisTemplate.expire(cacheKey1, 7, TimeUnit.DAYS);
         }
 
+        // 更新Redis中缓存的信息
+        String cacheKey = "document:" + documentId;
+        redisTemplate.opsForValue().set(cacheKey, document);
+        redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
 
         return document;
     }
 
 
+
+
+
     @Override
     public boolean deleteDocument(Long documentId) {
+        Document document = documentMapper.selectById(documentId);
+        if (document == null) {
+            return false;
+        }
+
+        // 执行逻辑删除  并且设置删除时间
         int i = documentMapper.deleteById(documentId);
-        // 删除缓存的信息
+
         if (i > 0) {
+            // 删除cacheKey1中的文档信息
+            String cacheKey1 = "user:" + document.getUserId() + ":documents";
+            List<Object> userDocumentsRaw = (List<Object>) redisTemplate.opsForValue().get(cacheKey1);
+            if (userDocumentsRaw != null) {
+                List<Document> userDocuments = userDocumentsRaw.stream()
+                        .map(doc -> objectMapper.convertValue(doc, Document.class))
+                        .filter(doc -> !doc.getId().equals(documentId))
+                        .collect(Collectors.toList());
+                redisTemplate.opsForValue().set(cacheKey1, userDocuments);
+                redisTemplate.expire(cacheKey1, 7, TimeUnit.DAYS);
+            }
+
+            // 删除缓存的信息
             String cacheKey = "document:" + documentId;
             redisTemplate.delete(cacheKey);
         }
+
         return i > 0;
     }
+
 
 
     @Override
