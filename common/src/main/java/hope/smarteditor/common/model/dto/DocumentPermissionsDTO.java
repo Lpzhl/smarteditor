@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
-public class DocumentpermissionsDTO implements Serializable {
+public class DocumentPermissionsDTO implements Serializable {
     private Long documentId;
 
     private Long userId;

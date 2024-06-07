@@ -12,4 +12,8 @@ public class DocumentUpdateDTO implements Serializable {
     private Integer type;
     private String label;
     private Integer status;
+    private String subject;
+    private String category;
+
+    private Long userId;
 }

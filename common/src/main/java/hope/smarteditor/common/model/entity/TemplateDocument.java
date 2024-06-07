@@ -30,6 +30,10 @@ public class TemplateDocument implements Serializable {
 
     private String label;
 
+    private String subject;
+
+    private String category;
+
     private Integer status;
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
