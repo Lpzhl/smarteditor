@@ -4,19 +4,26 @@ package hope.smarteditor.document.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.exception.BusinessException;
 import hope.smarteditor.common.exception.GlobalExceptionHandler;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.entity.Document;
+import hope.smarteditor.common.model.entity.DocumentOperation;
+import hope.smarteditor.common.model.entity.DocumentVersion;
 import hope.smarteditor.common.model.entity.Documentpermissions;
+import hope.smarteditor.document.mapper.DocumentOperationMapper;
+import hope.smarteditor.document.mapper.DocumentVersionMapper;
 import hope.smarteditor.document.mapper.DocumentpermissionsMapper;
 import hope.smarteditor.document.service.DocumentService;
 import hope.smarteditor.document.mapper.DocumentMapper;
 import io.minio.*;
 import io.minio.errors.MinioException;
 import io.minio.http.Method;
+import org.apache.dubbo.config.annotation.DubboReference;
+import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -59,6 +66,15 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private DocumentVersionMapper documentVersionMapper;
+
+    @Autowired
+    private DocumentOperationMapper documentOperationMapper;
+
+    @DubboReference(version = "1.0.0", group = "user", check = false)
+    private UserDubboService userDubboService;
 
     @Override
     public String uploadFile(MultipartFile file) throws Exception{
@@ -115,6 +131,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         document.setType(documentUploadDTO.getType());
         document.setLabel(documentUploadDTO.getLabel());
         document.setStatus(documentUploadDTO.getStatus());
+        document.setCategory(documentUploadDTO.getCategory());
+        document.setSubject(documentUploadDTO.getSubject());
         document.setCreateTime(new Date());
         document.setUpdateTime(new Date());
 
@@ -147,7 +165,6 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         redisTemplate.opsForValue().set(cacheKey, savedDocument);
         // 设置缓存过期时间，例如1小时
         redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
-
         return savedDocument;
     }
 
@@ -161,10 +178,20 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
      */
     @Override
     public Document updateDocument(Long documentId, DocumentUpdateDTO documentUpdateDTO) {
+        Long userId = documentUpdateDTO.getUserId();
         Document document = documentMapper.selectById(documentId);
         if (document == null) {
             return null;
         }
+
+        // 保存旧版本到文档版本表
+        DocumentVersion documentVersion = new DocumentVersion();
+        documentVersion.setDocumentId(document.getId());
+        documentVersion.setVersion(getNextVersionNumber(documentId));
+        documentVersion.setContent(document.getContent());
+        documentVersion.setSummary(document.getSummary());
+        documentVersion.setUpdateTime(new Date());
+        documentVersionMapper.insert(documentVersion);
 
         // 更新文档对象中非空字段
         if (documentUpdateDTO.getName() != null) {
@@ -181,6 +208,12 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         }
         if (documentUpdateDTO.getLabel() != null) {
             document.setLabel(documentUpdateDTO.getLabel());
+        }
+        if (documentUpdateDTO.getSubject() != null) {
+            document.setSubject(documentUpdateDTO.getSubject());
+        }
+        if (documentUpdateDTO.getCategory() != null) {
+            document.setCategory(documentUpdateDTO.getCategory());
         }
 
         document.setUpdateTime(new Date());
@@ -210,8 +243,36 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         String cacheKey = "document:" + documentId;
         redisTemplate.opsForValue().set(cacheKey, document);
         redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
+        String name =  userDubboService.getUserNameByUserId(userId);
+        // 记录用户操作到文档操作表
+        DocumentOperation documentOperation = new DocumentOperation();
+        documentOperation.setDocumentId(documentId);
+        documentOperation.setUserId(userId);
+        documentOperation.setOperation("编辑");
+        documentOperation.setDescription("用户 " + name + " 更新了文档《 " + documentMapper.selectById(documentId).getName()+ "》");
+        documentOperation.setOperationTime(new Date());
+        documentOperationMapper.insert(documentOperation);
 
         return document;
+    }
+
+    private double getNextVersionNumber(Long documentId) {
+        // 使用QueryWrapper获取文档版本表中该文档的最大版本号
+        QueryWrapper<DocumentVersion> wrapper = new QueryWrapper<>();
+        wrapper.eq("document_id", documentId)
+                .orderByDesc("version")
+                .last("LIMIT 1");
+
+        DocumentVersion documentVersion = documentVersionMapper.selectOne(wrapper);
+        Double maxVersion = null;
+
+        //如果documentVersion 为null 则版本号为1.00，否则版本号加0.01
+        if (documentVersion != null) {
+            maxVersion = documentVersion.getVersion();
+        }
+
+        // 如果文档版本表中没有记录，则版本号为1.00，否则版本号加0.01
+        return (maxVersion == null) ? 1.00 : Math.round((maxVersion + 0.01) * 100.0) / 100.0;
     }
 
 

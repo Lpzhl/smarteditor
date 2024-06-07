@@ -4,13 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.exception.BusinessException;
-import hope.smarteditor.common.model.dto.DocumentpermissionsDTO;
+import hope.smarteditor.common.model.dto.DocumentPermissionsDTO;
 import hope.smarteditor.common.model.entity.Documentpermissions;
 import hope.smarteditor.common.model.entity.Permissions;
 import hope.smarteditor.document.mapper.PermissionsMapper;
 import hope.smarteditor.document.service.DocumentpermissionsService;
 import hope.smarteditor.document.mapper.DocumentpermissionsMapper;
-import hope.smarteditor.document.service.PermissionsService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +32,7 @@ public class DocumentpermissionsServiceImpl extends ServiceImpl<Documentpermissi
     private PermissionsMapper permissionsMapper;
 
     @Override
-    public boolean setUserAbility(DocumentpermissionsDTO documentpermissionsDTO) {
+    public boolean setUserAbility(DocumentPermissionsDTO documentpermissionsDTO) {
         Documentpermissions documentpermissions = new Documentpermissions();
 
         BeanUtils.copyProperties(documentpermissionsDTO, documentpermissions);

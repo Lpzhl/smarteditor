@@ -1,6 +1,6 @@
 package hope.smarteditor.document.service;
 
-import hope.smarteditor.common.model.dto.DocumentpermissionsDTO;
+import hope.smarteditor.common.model.dto.DocumentPermissionsDTO;
 import hope.smarteditor.common.model.entity.Documentpermissions;
 import com.baomidou.mybatisplus.extension.service.IService;
 import hope.smarteditor.common.model.entity.Permissions;
@@ -14,7 +14,7 @@ import java.util.List;
 */
 public interface DocumentpermissionsService extends IService<Documentpermissions> {
 
-    boolean setUserAbility(DocumentpermissionsDTO documentpermissionsDTO);
+    boolean setUserAbility(DocumentPermissionsDTO documentpermissionsDTO);
 
     List<Permissions> getPermissionsForUserAndDocument(Long userId, Long documentId);
 }
