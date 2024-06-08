@@ -8,6 +8,7 @@ package hope.smarteditor.common.constant;
 public enum ErrorCode {
 
     SUCCESS(200, "成功"),
+    LOGIN_SUCCESS(200, "登录成功"),
     PARAMS_ERROR(400, "请求参数错误"),
     NOT_LOGIN_ERROR(401, "未登录"),
     NO_AUTH_ERROR(403, "无权限"),
@@ -22,6 +23,7 @@ public enum ErrorCode {
     UPDATE_FILE_ERROR(500, "更新文件失败"),
     SET_USER_VISBILITY_ERROR(500, "设置用户权限失败"),
     OPERATION_ERROR(500, "操作失败");
+
 
     /**
      * 状态码
