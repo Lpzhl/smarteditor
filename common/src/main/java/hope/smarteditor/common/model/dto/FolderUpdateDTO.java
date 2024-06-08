@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
-public class FolderDTO implements Serializable {
-    private Long userId;
+public class FolderUpdateDTO implements Serializable {
+    private Long id;
     private String name;
 }
