@@ -13,6 +13,7 @@ logging:
       springframework:
         cloud:
           gateway: trace
+    reactor.netty: TRACE
 spring:
   redis:
     host: ${redis-host:127.0.0.1}
@@ -48,6 +49,11 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/user/**
+        - id: document-service
+          uri: lb://document-service
+          predicates:
+            - Path=/document/**
+
 hope:
   jwt:
     # 设置jwt签名加密时使用的秘钥

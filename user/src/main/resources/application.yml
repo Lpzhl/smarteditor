@@ -1,6 +1,6 @@
 server:
   # 设置端口号
-  port: 8080
+  port: 8081
   # 设置IP地址
   address: 0.0.0.0
 spring:
@@ -25,7 +25,7 @@ spring:
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://${mysql-addr:8.130.128.14:3306}/smarteditor?useSSL=false&amp&serverTimezone=UTC
+      url: jdbc:mysql://${mysql-addr:localhost:3306}/smarteditor?useSSL=false&amp&serverTimezone=UTC
       username: ${mysql-username:root}
       password: ${mysql-password:123456}
   redis:
@@ -54,35 +54,27 @@ mybatis-plus:
       logic-delete-field: isDelete # 全局逻辑删除的实体字段名
       logic-delete-value: 1 # 逻辑已删除值（默认为 1）
       logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
+      id-type: auto
 
 dubbo:
   consumer:
     timeout: 30000
     retries: 0
-  protocol:
-    id: dubbo
-    name: dubbo
-    port: -1
-
-  scan:
-    basePackages:
   application:
-    # 禁用QOS同一台机器可能会有端口冲突现象
     qos-enable: false
     qos-accept-foreign-ip: false
-      #可选值 interface、instance、all，默认是 interface，即只注册接口级地址
-      #    register-mode: all
-      #只消费应用级
-      #    service-discovery:
-      # FORCE_INTERFACE，只消费接口级地址，如无地址则报错，单订阅 2.x 地址
-    # APPLICATION_FIRST，智能决策接口级/应用级地址，双订阅
-    # FORCE_APPLICATION，只消费应用级地址，如无地址则报错，单订阅 3.x 地址
-    #      migration: APPLICATION_FIRST
+    name: user-consumer
+  protocol:
+    name: dubbo
+    port: -1
   registry:
-    address: nacos:${nacos-addr:127.0.0.1:8848}
-    username: ${nacos-username:nacos}
-    password: ${nacos-password:nacos}
-
+    id: user-nacos-registry
+    address: nacos://localhost:8848
+    parameters:
+      # 修改
+      namespace: cd5b4c92-4168-411c-afb5-fea7b468821e
+      # 修改
+      group: dubbo
 
   # todo 需替换配置，然后取消注释
 #  elasticsearch:
@@ -98,3 +90,5 @@ hope:
     ttl: 323423000
     # 设置前端传递过来的令牌名称
     token-name: token
+
+
