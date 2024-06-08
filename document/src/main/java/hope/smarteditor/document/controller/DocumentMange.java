@@ -2,6 +2,7 @@ package hope.smarteditor.document.controller;
 
 
 import hope.smarteditor.common.constant.ErrorCode;
+import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.dto.DocumentPermissionsDTO;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
+import java.util.List;
 
 /**
  * (document)表控制层
@@ -42,16 +44,17 @@ public class DocumentMange {
 
 
 
+
     /**
      * 将在线富文本编写的文档信息上传到数据库中保存
      *  文档上传数据传输对象
      * @return 保存结果
      */
-    @ApiOperation("文档信息保存")
-    @PostMapping("/upload")
+    @ApiOperation("创建文档")
+    @PostMapping("/create")
     @LzhLog
     public Result<Document> upload(@RequestBody DocumentUploadDTO documentUploadDTO){
-        return Result.success(documentService.saveDocument(documentUploadDTO));
+        return Result.success(documentService.saveDocument(documentUploadDTO),ErrorCode.SUCCESS.getCode(), MessageConstant.CREATE_SUCCESSFUL);
     }
 
     /**
@@ -87,15 +90,15 @@ public class DocumentMange {
     public Result deleteDocument(@PathVariable Long documentId) {
         try {
             boolean isDeleted = documentService.deleteDocument(documentId);
-            String message = isDeleted ? "删除成功" : "删除失败";
+            String message = isDeleted ? MessageConstant.DELETE_SUCCESSFUL : MessageConstant.DELETE_FAILED;
             if(isDeleted){
                 return Result.success(message);
             }else {
                 return Result.error(message);
             }
         } catch (Exception e) {
-            log.error("删除文档失败", e);
-            return Result.error("删除文档失败");
+            log.error( MessageConstant.DELETE_SUCCESSFUL, e);
+            return Result.error(MessageConstant.DELETE_FAILED);
         }
     }
 
@@ -108,7 +111,7 @@ public class DocumentMange {
     @ApiOperation("设置文档对外权限")
     public  Result<Document> setDocumentVisibility(@PathVariable Long documentId) {
         documentService.setDocumentVisibility(documentId);
-        return Result.success("设置成功");
+        return Result.success(MessageConstant.SET_SUCCESSFUL);
     }
 
     /**
@@ -120,8 +123,18 @@ public class DocumentMange {
     @ApiOperation("设置文档对指定用户的权限")
     public Result setUserAbility(@RequestBody DocumentPermissionsDTO documentpermissionsDTO) {
         documentpermissionsService.setUserAbility(documentpermissionsDTO);
-        return Result.success("设置成功");
+        return Result.success(MessageConstant.SET_SUCCESSFUL);
     }
 
-
+    /**
+     * 获取用户已经删除的文档
+     */
+    @GetMapping("/getDeletedDocuments/{userId}")
+    @LzhLog
+    @ApiOperation("获取用户已经删除的文档")
+    // todo 有问题获取不到
+    public Result<List<Document>> getDeletedDocuments(@PathVariable Long userId) {
+        List<Document> deletedDocuments = documentService.getDeletedDocuments(userId);
+        return Result.success(deletedDocuments);
+    }
 }

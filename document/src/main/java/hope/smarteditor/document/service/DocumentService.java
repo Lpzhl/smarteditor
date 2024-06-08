@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 
 /**
 * @author lzh
@@ -27,4 +28,8 @@ public interface DocumentService extends IService<Document> {
 
 
     void setDocumentVisibility(Long documentId);
+
+    List<Document> getDeletedDocuments(Long userId);
+
+
 }

@@ -2,6 +2,7 @@ package hope.smarteditor.document.dubboImpl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.api.DocumentDubboService;
+import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.model.dto.FavoriteDocumentDTO;
 import hope.smarteditor.common.model.dto.FavoriteTemplateDTO;
 import hope.smarteditor.common.model.entity.*;
@@ -25,7 +26,7 @@ import java.util.concurrent.TimeUnit;
  */
 
 @Service
-@DubboService
+@DubboService(version = "1.0.0", group = "document",interfaceClass = DocumentDubboService.class)
 public class DocumentDubboServiceImpl implements DocumentDubboService {
 
     @Resource

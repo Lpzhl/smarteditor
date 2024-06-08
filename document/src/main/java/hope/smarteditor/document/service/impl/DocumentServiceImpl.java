@@ -1,6 +1,7 @@
 package hope.smarteditor.document.service.impl;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -125,7 +126,11 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
     public Document saveDocument(DocumentUploadDTO documentUploadDTO) {
         Document document = new Document();
         document.setUserId(documentUploadDTO.getUserId());
-        document.setName(documentUploadDTO.getName());
+        if(documentUploadDTO.getName() == null){
+            document.setName("未命名文档");
+        }else{
+            document.setName(documentUploadDTO.getName());
+        }
         document.setContent(documentUploadDTO.getContent());
         document.setSummary(documentUploadDTO.getSummary());
         document.setType(documentUploadDTO.getType());
@@ -346,8 +351,18 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         }
     }
 
-
-
+    /**
+     * 获取逻辑删除的文档
+     * @param userId
+     * @return
+     */
+    @Override
+    public List<Document> getDeletedDocuments(Long userId) {
+        QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId)
+                .eq("is_deleted", 1);
+       return documentMapper.selectList(queryWrapper.setEntity(null));
+    }
 
 }
 

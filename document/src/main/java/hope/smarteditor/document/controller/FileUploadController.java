@@ -1,5 +1,7 @@
 package hope.smarteditor.document.controller;
 
+import hope.smarteditor.common.constant.ErrorCode;
+import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.service.DocumentService;
@@ -22,9 +24,9 @@ public class FileUploadController {
     public Result uploadFile(@RequestParam("file") MultipartFile file) throws Exception {
         String fileUrl = documentService.uploadFile(file);
         if (fileUrl != null) {
-            return Result.success(fileUrl,200,"文件上传成功");
+            return Result.success(fileUrl, ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
         } else {
-            return Result.error("文件上传失败",500);
+            return Result.error(MessageConstant.FILE_UPLOAD_FAILED,500);
         }
     }
 }
