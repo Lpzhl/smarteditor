@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hope.smarteditor.document.mapper.DocumentFolderMapper">
+
+    <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.DocumentFolder">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <id property="documentId" column="document_id" jdbcType="BIGINT"/>
+            <id property="folderId" column="folder_id" jdbcType="BIGINT"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,document_id,folder_id,create_time
+    </sql>
+</mapper>
