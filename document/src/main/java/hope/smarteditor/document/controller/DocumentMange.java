@@ -4,11 +4,13 @@ package hope.smarteditor.document.controller;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
-import hope.smarteditor.common.model.dto.DocumentpermissionsDTO;
+import hope.smarteditor.common.model.dto.DocumentPermissionsDTO;
 import hope.smarteditor.common.model.entity.Document;
+import hope.smarteditor.common.model.entity.DocumentOperation;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.annotation.PermissionCheck;
+import hope.smarteditor.document.mapper.DocumentOperationMapper;
 import hope.smarteditor.document.service.DocumentService;
 import hope.smarteditor.document.service.DocumentpermissionsService;
 import io.swagger.annotations.Api;
@@ -16,6 +18,9 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
 
 /**
  * (document)表控制层
@@ -35,17 +40,17 @@ public class DocumentMange {
     @Autowired
     private DocumentpermissionsService documentpermissionsService;
 
+
+
     /**
      * 将在线富文本编写的文档信息上传到数据库中保存
-     *
      *  文档上传数据传输对象
      * @return 保存结果
      */
     @ApiOperation("文档信息保存")
     @PostMapping("/upload")
     @LzhLog
-    public Result<Document> upload(@RequestBody DocumentUploadDTO documentUploadDTO) throws Exception{
-
+    public Result<Document> upload(@RequestBody DocumentUploadDTO documentUploadDTO){
         return Result.success(documentService.saveDocument(documentUploadDTO));
     }
 
@@ -56,7 +61,6 @@ public class DocumentMange {
      * @param documentUpdateDTO 文档更新数据传输对象
      * @return 更新结果
      */
-
     @ApiOperation("更新文档信息")
     @PutMapping("/update/{documentId}")
     @LzhLog
@@ -71,10 +75,8 @@ public class DocumentMange {
         }
     }
 
-
     /**
      * 删除文档
-     *
      * @param documentId 文档ID
      * @return 删除结果
      */
@@ -99,8 +101,6 @@ public class DocumentMange {
 
     /**
      * 设置文档的对外权限
-     * @param documentId
-     * @return
      */
     @PermissionCheck(value = {"可管理"})
     @PutMapping("/setVisibility/{documentId}")
@@ -113,16 +113,15 @@ public class DocumentMange {
 
     /**
      * 设置文档对指定用户的权限
-     * @param documentpermissionsDTO
-     * @return
      */
     @PermissionCheck(value = {"可管理"})
     @PostMapping("setUserAbility")
     @LzhLog
     @ApiOperation("设置文档对指定用户的权限")
-    public Result setUserAbility(@RequestBody DocumentpermissionsDTO documentpermissionsDTO) {
+    public Result setUserAbility(@RequestBody DocumentPermissionsDTO documentpermissionsDTO) {
         documentpermissionsService.setUserAbility(documentpermissionsDTO);
         return Result.success("设置成功");
     }
+
 
 }
