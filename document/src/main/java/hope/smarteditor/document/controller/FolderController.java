@@ -3,10 +3,7 @@ package hope.smarteditor.document.controller;
 
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
-import hope.smarteditor.common.model.dto.DocumentFolderDTO;
-import hope.smarteditor.common.model.dto.FolderDTO;
-import hope.smarteditor.common.model.dto.FolderPermissionUpdateDTO;
-import hope.smarteditor.common.model.dto.FolderUpdateDTO;
+import hope.smarteditor.common.model.dto.*;
 import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
@@ -17,6 +14,8 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("folder")
@@ -58,13 +57,14 @@ public class FolderController {
     }
 
     /**
-     * 用户修改文件夹（名字，权限）
+     * 用户修改文件夹（名字）
      */
     @PostMapping("/updateFolder")
     @LzhLog
     @ApiOperation("用户修改文件夹")
-    public Result updateFolder(@RequestBody FolderUpdateDTO folderDTO){
-        return Result.success(folderService.updateFolder(folderDTO),ErrorCode.SUCCESS.getCode(),MessageConstant.UPDATE_SUCCESSFUL);
+    public Result updateFolder(@RequestBody FolderUpdateDTO folderDTO, HttpServletRequest request){
+        Long userId = Long.valueOf(request.getHeader("userId"));
+        return Result.success(folderService.updateFolder(folderDTO,userId),ErrorCode.SUCCESS.getCode(),MessageConstant.UPDATE_SUCCESSFUL);
     }
 
     /**
@@ -83,9 +83,10 @@ public class FolderController {
     @PostMapping("/createDocument")
     @LzhLog
     @ApiOperation("在文件夹中创建文档")
-    public Result createDocument(@RequestBody DocumentFolderDTO documentFolderDTO) {
+    public Result createDocument(@RequestBody DocumentFolderDTO documentFolderDTO, HttpServletRequest request) {
+        Long userId = Long.valueOf(request.getHeader("userId"));
         Document document = documentService.saveDocument(documentFolderDTO.getDocumentUploadDTO());
-        return Result.success(folderService.createDocument(documentFolderDTO.getFolderId(), document.getId()), ErrorCode.SUCCESS.getCode(), MessageConstant.CREATE_SUCCESSFUL);
+        return Result.success(folderService.createDocument(documentFolderDTO.getFolderId(), document,userId), ErrorCode.SUCCESS.getCode(), MessageConstant.CREATE_SUCCESSFUL);
     }
 
     /**
@@ -96,6 +97,39 @@ public class FolderController {
     @ApiOperation("在文件夹中删除文档")
     public Result deleteDocument(@PathVariable Long documentId){
         return Result.success(folderService.deleteDocument(documentId), ErrorCode.SUCCESS.getCode(), MessageConstant.DELETE_SUCCESSFUL);
+    }
+
+    /**
+     * 在各类文件夹中移动文档
+     */
+    @PostMapping("/moveDocument")
+    @LzhLog
+    @ApiOperation("在各类文件夹中移动文档")
+    public Result moveDocument(@RequestBody MoveDocumentDTO moveDocumentDTO,HttpServletRequest request){
+        Long userId = Long.valueOf(request.getHeader("userId"));
+        return Result.success(folderService.moveDocument(moveDocumentDTO,userId), ErrorCode.SUCCESS.getCode(), MessageConstant.MOVE_SUCCESSFUL);
+    }
+
+    /**
+     * 将文档移动到文件夹
+     */
+    @PostMapping("/moveDocumentToFolder")
+    @LzhLog
+    @ApiOperation("将文档移动到文件夹")
+    public Result moveDocumentToFolder(@RequestBody MoveDocumentToFolderDTO moveDocumentToFolderDTO,HttpServletRequest request){
+        Long userId = Long.valueOf(request.getHeader("userId"));
+        return Result.success(folderService.moveDocumentToFolder(moveDocumentToFolderDTO,userId), ErrorCode.SUCCESS.getCode(), MessageConstant.MOVE_SUCCESSFUL);
+    }
+
+    /**
+     * 获取一个用户的所有文件夹文档信息
+     */
+    @GetMapping("/getFolderDocument")
+    @LzhLog
+    @ApiOperation("获取一个用户的所有文件夹文档信息")
+    public Result getFolderDocument(HttpServletRequest request){
+        Long userId = Long.valueOf(request.getHeader("userId"));
+        return Result.success(folderService.getFolderDocument(userId), ErrorCode.SUCCESS.getCode(), MessageConstant.OPERATION_SUCCESSFUL);
     }
 
 }
