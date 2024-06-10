@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.entity.Document;
+import hope.smarteditor.common.model.entity.User;
+import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.InvalidKeyException;
@@ -32,4 +34,5 @@ public interface DocumentService extends IService<Document> {
     List<Document> getDeletedDocuments(Long userId);
 
 
+    List<DocumentUserPermisssVO> getParticipants(Long documentId);
 }

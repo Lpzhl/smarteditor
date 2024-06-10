@@ -11,15 +11,10 @@ import hope.smarteditor.common.exception.BusinessException;
 import hope.smarteditor.common.exception.GlobalExceptionHandler;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
-import hope.smarteditor.common.model.entity.Document;
-import hope.smarteditor.common.model.entity.DocumentOperation;
-import hope.smarteditor.common.model.entity.DocumentVersion;
-import hope.smarteditor.common.model.entity.Documentpermissions;
-import hope.smarteditor.document.mapper.DocumentOperationMapper;
-import hope.smarteditor.document.mapper.DocumentVersionMapper;
-import hope.smarteditor.document.mapper.DocumentpermissionsMapper;
+import hope.smarteditor.common.model.entity.*;
+import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
+import hope.smarteditor.document.mapper.*;
 import hope.smarteditor.document.service.DocumentService;
-import hope.smarteditor.document.mapper.DocumentMapper;
 import io.minio.*;
 import io.minio.errors.MinioException;
 import io.minio.http.Method;
@@ -35,9 +30,7 @@ import javax.annotation.Resource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -70,6 +63,9 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     @Autowired
     private DocumentVersionMapper documentVersionMapper;
+
+    @Autowired
+    private PermissionsMapper permissionsMapper;
 
     @Autowired
     private DocumentOperationMapper documentOperationMapper;
@@ -363,6 +359,52 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
                 .eq("is_deleted", 1);
        return documentMapper.selectList(queryWrapper.setEntity(null));
     }
+
+    @Override
+    public List<DocumentUserPermisssVO> getParticipants(Long documentId) {
+        // 查询文档对象
+        QueryWrapper<Documentpermissions> documentpermissionsQueryWrapper = new QueryWrapper<>();
+        documentpermissionsQueryWrapper.eq("document_id", documentId);
+        List<Documentpermissions> documentpermissions = documentpermissionsMapper.selectList(documentpermissionsQueryWrapper);
+
+        // 获取用户的ID列表
+        List<Long> userIds = documentpermissions.stream()
+                .map(Documentpermissions::getUserId)
+                .collect(Collectors.toList());
+
+        // 查询用户信息
+        if (userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<User> users = userDubboService.getUserInfoByUserId(userIds);
+
+        // 获取权限信息
+        List<Long> permissionIds = documentpermissions.stream()
+                .map(Documentpermissions::getPermissionId)
+                .collect(Collectors.toList());
+        List<Permissions> permissions = permissionsMapper.selectBatchIds(permissionIds);
+
+        // 构建权限ID到权限名称的映射
+        Map<Long, String> permissionIdToNameMap = permissions.stream()
+                .collect(Collectors.toMap(Permissions::getPermissionId, Permissions::getPermissionName));
+
+        // 构建用户ID到用户对象的映射
+        Map<Long, User> userIdToUserMap = users.stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
+        // 包装成DocumentUserPermisssVO返回给前端
+        List<DocumentUserPermisssVO> result = documentpermissions.stream()
+                .map(dp -> {
+                    DocumentUserPermisssVO vo = new DocumentUserPermisssVO();
+                    vo.setUser(userIdToUserMap.get(dp.getUserId()));
+                    vo.setPermission(permissionIdToNameMap.get(dp.getPermissionId()));
+                    return vo;
+                })
+                .collect(Collectors.toList());
+
+        return result;
+    }
+
 
 }
 
