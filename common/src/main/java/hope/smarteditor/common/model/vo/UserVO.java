@@ -32,4 +32,10 @@ public class UserVO implements Serializable {
     @ApiModelProperty("用户余额")
     private Integer money;
 
+    @ApiModelProperty("用户昵称")
+    private String nickname;
+    @ApiModelProperty("用户头像")
+    private String avatar;
+
+
 }
