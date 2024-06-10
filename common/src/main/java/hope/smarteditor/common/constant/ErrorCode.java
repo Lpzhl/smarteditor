@@ -22,8 +22,12 @@ public enum ErrorCode {
     DELETE_FILE_ERROR(500, "删除文件失败"),
     UPDATE_FILE_ERROR(500, "更新文件失败"),
     SET_USER_VISBILITY_ERROR(500, "设置用户权限失败"),
+    DELETE_FROM_SOURCE_FOLDER_ERROR(500, "无法从源文件夹中删除文档"),
+    DOCUMENT_EXISTS_IN_TARGET_FOLDER(500, "目标文件夹中已存在文档"),
+    ADD_TO_TARGET_FOLDER_ERROR(500, "未能将文档添加到目标文件夹"),
     OPERATION_ERROR(500, "操作失败");
 
+    //token已过期
 
     /**
      * 状态码

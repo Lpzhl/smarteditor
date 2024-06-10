@@ -27,5 +27,10 @@ public class MessageConstant {
     public static final String FAVORITE_CANCELED = "已取消收藏";
     public static final String ALREADY_LIKED = "已点赞";
     public static final String LIKE_CANCELED = "已取消点赞";
+    public static final String MOVE_SUCCESSFUL = "移动成功";
+    public static final String CREATE_FOLDER = "创建文件夹成功";
+    public static final String UPDATE_FOLDER = "更改了名字";
+    public static final String CREATE_DOCUMENT = "移入";
+    public static final String OUT_DOCUMENT = "移出";
 }
 
