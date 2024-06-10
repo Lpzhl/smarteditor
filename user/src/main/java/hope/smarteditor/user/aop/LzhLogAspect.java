@@ -32,26 +32,33 @@ public class LzhLogAspect {
     public void beforePkhLog(JoinPoint joinPoint) {
         ServletRequestAttributes requestAttributes =
                 (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        HttpServletRequest request = requestAttributes.getRequest();
+        if (requestAttributes != null) {
+            HttpServletRequest request = requestAttributes.getRequest();
 
-        String methodName = joinPoint.getSignature().getName();
-        log.info("===================== Method " + methodName + "() begin==============");
-        // 执行时间
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date d= new Date();
-        String time = sdf.format(d);
-        log.info("Time           : " + time);
-        // 打印请求 URL
-        log.info("URL            : " + request.getRequestURL());
-        // 打印 请求方法
-        log.info("HTTP Method    : " + request.getMethod());
-        // 打印controller 的全路径以及执行方法
-        log.info("Class Method   : " + joinPoint.getSignature().getDeclaringTypeName() + "." + methodName);
-        // 打印请求的 IP
-        log.info("IP             : " + request.getRemoteHost());
-        // 打印请求入参
-        log.info("Request Args   : " + JSON.toJSONString(joinPoint.getArgs()));
-        log.info("Executing Controller...");
+            String methodName = joinPoint.getSignature().getName();
+            log.info("===================== Method " + methodName + "() begin==============");
+            // 执行时间
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date d = new Date();
+            String time = sdf.format(d);
+            log.info("时间           : " + time);
+            // 打印请求 URL
+            log.info("请求 URL            : " + request.getRequestURL());
+            // 打印请求方法
+            log.info("请求方法   : " + request.getMethod());
+            // 打印controller的全路径以及执行方法
+            log.info("controller的全路径以及执行方法  : " + joinPoint.getSignature().getDeclaringTypeName() + "." + methodName);
+            // 打印请求的 IP
+            log.info("请求的 IP             : " + request.getRemoteHost());
+            // 打印请求入参
+            Object[] args = joinPoint.getArgs();
+            for (Object arg : args) {
+                log.info("请求入参    : " + arg);
+            }
+            log.info("执行控制器...");
+        } else {
+            log.warn("无法检索请求属性");
+        }
     }
 
     @After("LzhLogAspect()")
@@ -60,3 +67,4 @@ public class LzhLogAspect {
         log.info("======================== Method " + methodName + "() End ==========================");
     }
 }
+
