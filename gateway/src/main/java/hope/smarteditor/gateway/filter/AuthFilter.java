@@ -1,6 +1,8 @@
 
 package hope.smarteditor.gateway.filter;
 
+import hope.smarteditor.gateway.config.RedisService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;
 import hope.smarteditor.common.constant.JwtClaimsConstant;
@@ -31,7 +33,7 @@ import java.util.List;
 /**
  *
  * 网关jwt过滤器
-*/
+ */
 
 
 
@@ -45,13 +47,16 @@ public class AuthFilter implements GlobalFilter, Ordered {
     // 定义白名单列表
     private static final List<String> WHITE_LIST = Arrays.asList("/user/login", "/user/register");
 
+    @Autowired
+    private RedisService redisService;
+
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         ServerHttpResponse response = exchange.getResponse();
 
-        /// 获取请求路径
+        // 获取请求路径
         String encodedPath = request.getPath().value();
 
 
@@ -70,28 +75,47 @@ public class AuthFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        // 从请求头中获取令牌
+        // 从请求头中获取令牌和userId
         String token = request.getHeaders().getFirst("Authorization");
+        String userIdHeader = request.getHeaders().getFirst("userId");
 
-        if (token == null) {
-            // 令牌缺失或格式不正确，返回未授权状态
+        if (token == null || userIdHeader == null) {
+            // 令牌或userId缺失或格式不正确，返回未授权状态
             return onError(response, HttpStatus.UNAUTHORIZED, "未授权");
         }
-
 
         try {
             // 验证令牌
             Claims claims = JwtUtil.parseJWT(jwtProperties.getSecretKey(), token);
-            Long empId = Long.valueOf(claims.get(JwtClaimsConstant.USER_ID).toString());
+            Long tokenUserId = Long.valueOf(claims.get(JwtClaimsConstant.USER_ID).toString());
+            Long headerUserId = Long.valueOf(userIdHeader);
+
+            System.out.println("tokenUserId = " + tokenUserId);
+            System.out.println("headerUserId = " + headerUserId);
+
+            if (!headerUserId.equals(tokenUserId)) {
+                // 当前用户ID与token中的用户ID不匹配，返回未授权状态
+                return onError(response, HttpStatus.UNAUTHORIZED, "未授权");
+            }
+
+            // 从Redis中获取存储的token
+            String redisToken = (String) redisService.getLike(tokenUserId.toString());
+
+            if (redisToken == null || !redisToken.equals(token)) {
+                // 如果Redis中没有token或token不匹配，返回未授权状态
+                return onError(response, HttpStatus.UNAUTHORIZED, "token已过期或者未授权");
+            }
+
         } catch (Exception ex) {
             // 令牌无效，返回未授权状态
             System.out.println("ex = " + ex.getMessage());
-            return onError(response, HttpStatus.UNAUTHORIZED, "token已过期");
+            return onError(response, HttpStatus.UNAUTHORIZED, "token已过期或者未授权");
         }
 
         // 令牌有效，继续过滤器链
         return chain.filter(exchange);
     }
+
 
     // 检查请求路径是否在白名单中
     private boolean isWhiteListed(String requestPath) {
