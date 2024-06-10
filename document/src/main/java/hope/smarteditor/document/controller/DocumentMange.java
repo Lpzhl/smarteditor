@@ -8,6 +8,8 @@ import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.dto.DocumentPermissionsDTO;
 import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.model.entity.DocumentOperation;
+import hope.smarteditor.common.model.entity.User;
+import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.annotation.PermissionCheck;
@@ -41,9 +43,6 @@ public class DocumentMange {
 
     @Autowired
     private DocumentpermissionsService documentpermissionsService;
-
-
-
 
     /**
      * 将在线富文本编写的文档信息上传到数据库中保存
@@ -136,5 +135,16 @@ public class DocumentMange {
     public Result<List<Document>> getDeletedDocuments(@PathVariable Long userId) {
         List<Document> deletedDocuments = documentService.getDeletedDocuments(userId);
         return Result.success(deletedDocuments);
+    }
+
+    /**
+     * 获取一个文档的所有参与者
+     */
+    @GetMapping("/getParticipants/{documentId}")
+    @LzhLog
+    @ApiOperation("获取一个文档的所有参与者")
+    public Result<List<DocumentUserPermisssVO>> getParticipants(@PathVariable Long documentId) {
+        List<DocumentUserPermisssVO> participants = documentService.getParticipants(documentId);
+        return Result.success(participants);
     }
 }
