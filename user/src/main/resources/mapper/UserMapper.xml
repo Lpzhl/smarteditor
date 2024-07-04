@@ -10,6 +10,8 @@
             <result property="password" column="password" jdbcType="VARCHAR"/>
             <result property="email" column="email" jdbcType="VARCHAR"/>
             <result property="level" column="level" jdbcType="INTEGER"/>
+            <result property="nickname" column="nickname" jdbcType="VARCHAR"/>
+            <result property="avatar" column="avatar" jdbcType="INTEGER"/>
             <result property="money" column="money" jdbcType="INTEGER"/>
             <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
             <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
@@ -17,7 +19,7 @@
 
     <sql id="Base_Column_List">
         id,username,password,
-        email,level,money,
+        email,level,money,nickname,avatar
         create_time,update_time
     </sql>
 </mapper>
