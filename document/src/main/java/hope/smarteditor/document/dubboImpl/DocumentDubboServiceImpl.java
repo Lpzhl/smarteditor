@@ -3,6 +3,7 @@ package hope.smarteditor.document.dubboImpl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.api.DocumentDubboService;
 import hope.smarteditor.api.UserDubboService;
+import hope.smarteditor.common.constant.AuthorityConstant;
 import hope.smarteditor.common.model.dto.FavoriteDocumentDTO;
 import hope.smarteditor.common.model.dto.FavoriteTemplateDTO;
 import hope.smarteditor.common.model.entity.*;
@@ -39,6 +40,8 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
     private TemplateDocumentMapper templateDocumentMapper;
     @Resource
     private UserDocumentLikeMapper userDocumentLikeMapper;
+    @Resource
+    private FolderMapper folderMapper;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -224,6 +227,16 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
         documentMapper.updateById(document);
 
         return false;
+    }
+
+    @Override
+    public boolean createFolder(String folderName, Long userId) {
+        Folder folder = new Folder();
+        folder.setPermissions(AuthorityConstant.VIEW);
+        folder.setUserId(userId);
+        folder.setName(folderName);
+        int insert = folderMapper.insert(folder);
+        return insert>0;
     }
 
 }

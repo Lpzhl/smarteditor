@@ -44,5 +44,8 @@ public interface DocumentDubboService  {
 
     boolean likeDocument(Long documentId, Long userId);
 
-
+    /**
+     * 用户创建文件夹
+     */
+    boolean createFolder(String folderName, Long userId);
 }
