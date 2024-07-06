@@ -5,10 +5,10 @@
 <mapper namespace="hope.smarteditor.document.mapper.RecentDocumentsMapper">
 
     <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.RecentDocuments">
-            <id property="id" column="id" jdbcType="INTEGER"/>
-            <result property="userId" column="user_id" jdbcType="INTEGER"/>
-            <result property="documentId" column="document_id" jdbcType="INTEGER"/>
-            <result property="accessTime" column="access_time" jdbcType="TIMESTAMP"/>
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="documentId" column="document_id" jdbcType="BIGINT"/>
+            <result property="accessTime" column="access_time" jdbcType="DATE"/>
     </resultMap>
 
     <sql id="Base_Column_List">
