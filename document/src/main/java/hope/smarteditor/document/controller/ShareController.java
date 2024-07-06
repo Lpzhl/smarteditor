@@ -1,7 +1,7 @@
 package hope.smarteditor.document.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.common.model.dto.ShareDTO;
-import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.model.entity.RecentDocuments;
 import hope.smarteditor.common.model.entity.Share;
 import hope.smarteditor.common.model.vo.RecentDocumentsVO;
@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -29,6 +30,10 @@ public class ShareController {
 
     @Autowired
     private RecentDocumentsService recentDocumentsService;
+
+    @Autowired
+    private RecentDocumentsMapper recentDocumentsMapper;
+
 
     /**
      * 分享文档
