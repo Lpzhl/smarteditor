@@ -12,38 +12,19 @@ import lombok.Data;
  *
  * @TableName recent_documents
  */
+/**
+ * @TableName recent_documents
+ */
 @TableName(value ="recent_documents")
 @Data
 public class RecentDocuments implements Serializable {
-    /**
-     *
-     */
-    @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
 
-    /**
-     *
-     */
-    private Integer userId;
+    private Long userId;
 
-    /**
-     *
-     */
-    private Integer documentId;
+    private Long documentId;
 
-    /**
-     *
-     */
     private Date accessTime;
 
-    @TableField(exist = false)
     private static final long serialVersionUID = 1L;
-
-    public RecentDocuments(Long userId, Long docId, Date date) {
-           this.userId = userId.intValue();
-
-        this.documentId = docId.intValue();
-
-        this.accessTime = date;
-    }
 }
