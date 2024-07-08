@@ -1,7 +1,9 @@
 
 package hope.smarteditor.gateway.filter;
 
+import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.gateway.config.RedisService;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;
@@ -35,8 +37,6 @@ import java.util.List;
  * 网关jwt过滤器
  */
 
-
-
 @Component
 @Slf4j
 public class AuthFilter implements GlobalFilter, Ordered {
@@ -50,6 +50,11 @@ public class AuthFilter implements GlobalFilter, Ordered {
     @Autowired
     private RedisService redisService;
 
+    @DubboReference(version = "1.0.0", group = "user", check = false)
+    private UserDubboService userDubboService;
+
+    // 每次调用AI接口扣除的金额
+    private static final int AI_CALL_DEDUCTION = 10;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -58,7 +63,6 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
         // 获取请求路径
         String encodedPath = request.getPath().value();
-
 
         try {
             // 解码 URL
@@ -106,6 +110,15 @@ public class AuthFilter implements GlobalFilter, Ordered {
                 return onError(response, HttpStatus.UNAUTHORIZED, "token已过期或者未授权");
             }
 
+            // 检查请求路径是否为AI接口
+            if (isAiEndpoint(encodedPath)) {
+                // 扣除用户费用
+                boolean isDeducted = userDubboService.checkAndDeduct(tokenUserId, AI_CALL_DEDUCTION);
+                if (!isDeducted) {
+                    return onError(response, HttpStatus.FORBIDDEN, "余额不足");
+                }
+            }
+
         } catch (Exception ex) {
             // 令牌无效，返回未授权状态
             System.out.println("ex = " + ex.getMessage());
@@ -116,7 +129,6 @@ public class AuthFilter implements GlobalFilter, Ordered {
         return chain.filter(exchange);
     }
 
-
     // 检查请求路径是否在白名单中
     private boolean isWhiteListed(String requestPath) {
         PathMatcher pathMatcher = new AntPathMatcher();
@@ -126,6 +138,12 @@ public class AuthFilter implements GlobalFilter, Ordered {
             }
         }
         return false;
+    }
+
+    // 检查请求路径是否为AI接口
+    private boolean isAiEndpoint(String requestPath) {
+        // 根据你的AI接口路径进行匹配，这里假设所有AI接口都在 /api/ai 路径下
+        return requestPath.startsWith("/ai");
     }
 
     // 创建错误响应体的方法

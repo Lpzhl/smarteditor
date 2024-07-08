@@ -1,6 +1,8 @@
 package hope.smarteditor.gateway.filter;
 
+import hope.smarteditor.api.UserDubboService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.reactivestreams.Publisher;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -34,6 +36,12 @@ import java.util.List;
 @Component
 public class CustomGlobalFilter implements GlobalFilter, Ordered {
 
+    @DubboReference(version = "1.0.0", group = "user", check = false)
+    private UserDubboService userDubboService;
+
+    // 每次调用AI接口扣除的金额
+    private static final int AI_CALL_DEDUCTION = 10;
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         // 1. 请求日志
@@ -61,15 +69,13 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
 
     }
 
-/**
+    /**
      * 处理响应
      *
      * @param exchange
      * @param chain
      * @return
      */
-
-
     public Mono<Void> handleResponse(ServerWebExchange exchange, GatewayFilterChain chain) {
         try {
             ServerHttpResponse originalResponse = exchange.getResponse();
@@ -77,12 +83,18 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
             DataBufferFactory bufferFactory = originalResponse.bufferFactory();
             // 拿到响应码
             HttpStatus statusCode = originalResponse.getStatusCode();
+            // 1. 请求日志
+            ServerHttpRequest request = exchange.getRequest();
+            String method = request.getMethod().toString();
+            log.info("请求唯一标识：" + request.getId());
+            String encodedPath = request.getPath().toString();
             if (statusCode == HttpStatus.OK) {
                 // 装饰，增强能力
                 ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(originalResponse) {
                     // 等调用完转发的接口后才会执行
                     @Override
                     public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+                        log.info("进入响应装饰器...");
                         log.info("body instanceof Flux: {}", (body instanceof Flux));
                         if (body instanceof Flux) {
                             Flux<? extends DataBuffer> fluxBody = Flux.from(body);
@@ -90,9 +102,20 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
                             // 拼接字符串
                             return super.writeWith(
                                     fluxBody.map(dataBuffer -> {
-                                        // 业务逻辑
+                                        // todo 业务逻辑处理消费ai
                                         try {
+                                            // 检查请求路径是否为AI接口
+                                            if (isAiEndpoint(encodedPath)) {
+                                                // 从请求头中获取userId
+                                                String userIdHeader = exchange.getRequest().getHeaders().getFirst("userId");
+                                                Long userId = Long.valueOf(userIdHeader);
 
+                                                // 扣除用户费用
+                                                boolean isDeducted = userDubboService.deductMoney(userId, AI_CALL_DEDUCTION);
+                                                if (!isDeducted) {
+                                                    return bufferFactory.wrap("余额不足".getBytes(StandardCharsets.UTF_8));
+                                                }
+                                            }
                                         } catch (Exception e) {
                                             log.error("invokeCount error", e);
                                         }
@@ -128,9 +151,15 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return 0;
+        return -1;  //重大bug这里不能写  0 现在还没搞清楚
     }
 
+
+    // 检查请求路径是否为AI接口
+    private boolean isAiEndpoint(String requestPath) {
+        // 根据你的AI接口路径进行匹配，这里假设所有AI接口都在 /api/ai 路径下
+        return requestPath.startsWith("/ai");
+    }
     public Mono<Void> handleNoAuth(ServerHttpResponse response) {
         response.setStatusCode(HttpStatus.FORBIDDEN);
         return response.setComplete();
@@ -141,4 +170,5 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
         return response.setComplete();
     }
 }
+
 
