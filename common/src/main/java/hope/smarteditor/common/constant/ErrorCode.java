@@ -25,6 +25,7 @@ public enum ErrorCode {
     DELETE_FROM_SOURCE_FOLDER_ERROR(500, "无法从源文件夹中删除文档"),
     DOCUMENT_EXISTS_IN_TARGET_FOLDER(500, "目标文件夹中已存在文档"),
     ADD_TO_TARGET_FOLDER_ERROR(500, "未能将文档添加到目标文件夹"),
+    NETWORK_ERROR(500, "网络错误"),
     OPERATION_ERROR(500, "操作失败");
 
     //token已过期

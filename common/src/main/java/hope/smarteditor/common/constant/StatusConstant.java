@@ -11,4 +11,12 @@ public class StatusConstant {
 
     //禁用
     public static final Integer DISABLE = 0;
+
+    // 已签到
+
+    public static final String USER_SIGN_IN = "已签到";
+
+    // 未签到
+
+    public static final String USER_NOT_SIGN_IN = "未签到";
 }

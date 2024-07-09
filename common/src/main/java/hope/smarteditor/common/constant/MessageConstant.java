@@ -5,7 +5,6 @@ package hope.smarteditor.common.constant;
  * @author lzh
  */
 public class MessageConstant {
-
     public static final String PASSWORD_ERROR = "密码错误";
     public static final String ACCOUNT_NOT_FOUND = "账号不存在";
     public static final String ACCOUNT_LOCKED = "账号被锁定";
@@ -32,5 +31,15 @@ public class MessageConstant {
     public static final String UPDATE_FOLDER = "更改了名字";
     public static final String CREATE_DOCUMENT = "移入";
     public static final String OUT_DOCUMENT = "移出";
+    public static final String SUCCESSFUL = "成功";
+    public static final String TEXT_CORRECTION_SUCCESSFUL = "文本纠错成功";
+
+    public static final String TITLE_GENERATION_SUCCESSFUL = "标题生成成功";
+
+    public static final String TEXT_SUMMARIZATION_SUCCESSFUL = "文本摘要成功";
+
+    public static final String TEXT_CONTINUATION_SUCCESSFUL = "续写成功成功";
+
+    public static final String NETWORK_ERROR = "网络错误";
 }
 
