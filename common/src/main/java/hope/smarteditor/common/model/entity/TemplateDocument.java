@@ -16,6 +16,7 @@ import lombok.Data;
 @TableName(value ="template_document")
 @Data
 public class TemplateDocument implements Serializable {
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long userId;
