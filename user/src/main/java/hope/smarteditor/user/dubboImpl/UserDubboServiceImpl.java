@@ -20,6 +20,7 @@ import java.util.List;
 @DubboService(version = "1.0.0", group = "user",interfaceClass = UserDubboService.class)
 public class UserDubboServiceImpl implements UserDubboService {
 
+
     @Autowired
     private UserMapper userMapper;
 
@@ -42,4 +43,32 @@ public class UserDubboServiceImpl implements UserDubboService {
         return users;
     }
 
+    @Override
+    public User getUserInfoByUserId(Long userIds) {
+        QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+        userQueryWrapper.in("id", userIds);
+        User user = userMapper.selectOne(userQueryWrapper);
+        user.setPassword("**********");
+        return user;
+    }
+
+    @Override
+    public boolean deductMoney(Long userId, int amount) {
+        User user = userMapper.selectById(userId);
+        if (user != null && user.getMoney() >= amount) {
+            user.setMoney(user.getMoney() - amount);
+            userMapper.updateById(user);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean checkAndDeduct(Long userId, int amount) {
+        User user = userMapper.selectById(userId);
+        if (user != null && user.getMoney() >= amount) {
+            return true;
+        }
+        return false;
+    }
 }
