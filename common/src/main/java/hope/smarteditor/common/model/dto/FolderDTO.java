@@ -8,4 +8,5 @@ import java.io.Serializable;
 public class FolderDTO implements Serializable {
     private Long userId;
     private String name;
+    private String description;
 }

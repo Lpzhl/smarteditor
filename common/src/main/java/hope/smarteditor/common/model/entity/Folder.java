@@ -21,6 +21,8 @@ public class Folder implements Serializable {
 
     private String name;
 
+    private String description;
+
     @TableLogic
     private Integer isDeleted;
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
