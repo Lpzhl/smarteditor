@@ -15,5 +15,5 @@ public interface ShareService extends IService<Share> {
 
     Share shareFolder(Long id, Integer validDays, String editPermission);
 
-    Document handleShareDocument(String link);
+    Document handleShareDocument(String link,Long userId);
 }

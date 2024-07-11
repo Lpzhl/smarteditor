@@ -2,6 +2,7 @@ package hope.smarteditor.document.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.common.model.dto.ShareDTO;
+import hope.smarteditor.common.model.dto.UserLoginDTO;
 import hope.smarteditor.common.model.entity.RecentDocuments;
 import hope.smarteditor.common.model.entity.Share;
 import hope.smarteditor.common.model.vo.RecentDocumentsVO;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,6 +35,7 @@ public class ShareController {
 
     @Autowired
     private RecentDocumentsMapper recentDocumentsMapper;
+
 
 
     /**
@@ -81,8 +84,9 @@ public class ShareController {
     @GetMapping("/document/{link}")
     @ApiOperation("处理分享的文档")
     @LzhLog
-    public Result handleShareDocument(@PathVariable String link) {
-        return Result.success(shareService.handleShareDocument(link));
+    public Result handleShareDocument(@PathVariable String link,HttpServletRequest request)  {
+        Long userId = (Long) request.getSession().getAttribute("userId");
+        return Result.success(shareService.handleShareDocument(link,userId));
     }
 
 
@@ -93,10 +97,10 @@ public class ShareController {
         recentDocumentsService.recordDocumentAccess(userId, documentId);
     }
 
-    @GetMapping("/recent")
+    @GetMapping("/recent/{userId}")
     @ApiOperation("获取最近访问的文档")
     @LzhLog
-    public Result<List<RecentDocumentsVO>> getRecentDocuments(@RequestParam Long userId) {
+    public Result<List<RecentDocumentsVO>> getRecentDocuments(@PathVariable("userId") Long userId) {
         return Result.success(recentDocumentsService.getRecentDocuments(userId));
     }
 }
