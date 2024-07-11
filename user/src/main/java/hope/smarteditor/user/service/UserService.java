@@ -42,4 +42,24 @@ public interface UserService extends IService<User> {
     String paperOutlineGeneration(String text, String project, String paperType, String directoryType);
 
     List<BaiduResultVO> baidu(String text);
+
+    String ocrTable(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException;
+
+    String asr(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException;
+
+    String createChart(String text);
+
+    String format(String text);
+
+    String rewrite(String text);
+
+    String expansion(String text);
+
+    String abbreviation(String text);
+
+    String polish(String text,String requirement);
+
+    String dataVisualization(String text, String imageType);
+
+    User findByUsername(String username);
 }

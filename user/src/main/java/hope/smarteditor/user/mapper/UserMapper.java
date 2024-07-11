@@ -4,6 +4,7 @@ package hope.smarteditor.user.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import hope.smarteditor.common.model.entity.User;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Component;
 @Mapper()
 public interface UserMapper extends BaseMapper<User> {
 
+    @Select("select * from user where username = #{username}")
+    User findByUsername(String username);
 }
 
 
