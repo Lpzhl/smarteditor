@@ -18,8 +18,9 @@ spring:
   redis:
     host: ${redis-host:127.0.0.1}
     port: ${redis-port:6379}
-    password: 123456
     timeout: 1000
+    password: 123456
+    database: 1
     lettuce:
       pool:
         minIdle: 30
@@ -31,6 +32,7 @@ spring:
     web-application-type: reactive
   cloud:
     gateway:
+      # 跨域配置
       globalcors:
         cors-configurations:
           '[/**]':
@@ -49,10 +51,58 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/user/**
+        - id: user-documents-service
+          uri: lb://user-service
+          predicates:
+            - Path=/documents/**
         - id: document-service
           uri: lb://document-service
           predicates:
             - Path=/document/**
+        - id: folder-service
+          uri: lb://document-service
+          predicates:
+            - Path=/folder/**
+        - id: ai-service
+          uri: lb://user-service
+          predicates:
+            - Path=/ai/**
+        - id: share-service
+          uri: lb://document-service
+          predicates:
+            - Path=/share/**
+        - id: search-service
+          uri: lb://document-service
+          predicates:
+            - Path=/search/**
+        - id: order-service
+          uri: lb://user-service
+          predicates:
+            - Path=/order/**
+        - id: user-element-service
+          uri: lb://user-service
+          predicates:
+            - Path=/element/**
+
+dubbo:
+  consumer:
+    timeout: 30000
+    retries: 0
+  application:
+    qos-enable: false
+    qos-accept-foreign-ip: false
+    name: geteway-consumer
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    id: geteway-nacos-registry
+    address: nacos://localhost:8848
+    parameters:
+      # 修改
+      namespace: cd5b4c92-4168-411c-afb5-fea7b468821e
+      # 修改
+      group: dubbo
 
 hope:
   jwt:
