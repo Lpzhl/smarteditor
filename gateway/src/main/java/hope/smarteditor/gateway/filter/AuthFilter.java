@@ -45,7 +45,7 @@ public class AuthFilter implements GlobalFilter, Ordered {
     private JwtProperties jwtProperties;
 
     // 定义白名单列表
-    private static final List<String> WHITE_LIST = Arrays.asList("/user/login", "/user/register");
+    private static final List<String> WHITE_LIST = Arrays.asList("/element/upload","/files/upload","/user/login", "/user/register","/alipay/pay","/alipay/notify","/alipay/payment-success");
 
     @Autowired
     private RedisService redisService;
@@ -60,6 +60,15 @@ public class AuthFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         ServerHttpResponse response = exchange.getResponse();
+
+        String method = request.getMethod().toString();
+
+
+        log.info("请求方法：" + method);
+        log.info("请求参数：" + request.getQueryParams());
+        String sourceAddress = request.getLocalAddress().getHostString();
+        log.info("请求来源地址：" + sourceAddress);
+        log.info("请求来源地址：" + request.getRemoteAddress());
 
         // 获取请求路径
         String encodedPath = request.getPath().value();
@@ -81,7 +90,11 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
         // 从请求头中获取令牌和userId
         String token = request.getHeaders().getFirst("Authorization");
+
+        log.info("token = " + token);
+
         String userIdHeader = request.getHeaders().getFirst("userId");
+        log.info("userIdHeader = " + userIdHeader);
 
         if (token == null || userIdHeader == null) {
             // 令牌或userId缺失或格式不正确，返回未授权状态
@@ -107,6 +120,7 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
             if (redisToken == null || !redisToken.equals(token)) {
                 // 如果Redis中没有token或token不匹配，返回未授权状态
+                redisService.deleteLike(redisToken);
                 return onError(response, HttpStatus.UNAUTHORIZED, "token已过期或者未授权");
             }
 
@@ -142,7 +156,6 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
     // 检查请求路径是否为AI接口
     private boolean isAiEndpoint(String requestPath) {
-        // 根据你的AI接口路径进行匹配，这里假设所有AI接口都在 /api/ai 路径下
         return requestPath.startsWith("/ai");
     }
 
