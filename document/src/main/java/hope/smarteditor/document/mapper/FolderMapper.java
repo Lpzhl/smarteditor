@@ -3,6 +3,10 @@ package hope.smarteditor.document.mapper;
 import hope.smarteditor.common.model.entity.Folder;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
 
 /**
 * @author LoveF
@@ -12,6 +16,9 @@ import org.apache.ibatis.annotations.Mapper;
 */
 @Mapper
 public interface FolderMapper extends BaseMapper<Folder> {
+
+    @Select("SELECT * FROM folder WHERE name LIKE CONCAT('%', #{keyword}, '%') AND user_id = #{userId}")
+    List<Folder> searchFoldersByName(@Param("keyword") String keyword, @Param("userId") Long userId);
 
 }
 
