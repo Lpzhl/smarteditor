@@ -23,6 +23,8 @@ public interface RecentDocumentsMapper extends BaseMapper<RecentDocuments> {
 
     @Select("SELECT document_id FROM recent_documents WHERE user_id = #{userId} ORDER BY access_time DESC LIMIT #{limit}")
     List<Long> selectRecentDocumentIdsByUserId(@Param("userId") Long userId, @Param("limit") int limit);
+
+
 }
 
 
