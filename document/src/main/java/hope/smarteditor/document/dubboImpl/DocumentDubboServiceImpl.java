@@ -7,10 +7,12 @@ import hope.smarteditor.common.constant.AuthorityConstant;
 import hope.smarteditor.common.model.dto.FavoriteDocumentDTO;
 import hope.smarteditor.common.model.dto.FavoriteTemplateDTO;
 import hope.smarteditor.common.model.entity.*;
+import hope.smarteditor.common.model.vo.DocumentInfoVO;
 import hope.smarteditor.common.model.vo.FavoriteDocumentVO;
 import hope.smarteditor.common.model.vo.FavoriteTemplateVO;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.mapper.*;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -46,34 +49,70 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @DubboReference(version = "1.0.0", group = "user", check = false)
+    private UserDubboService userDubboService;
+
+    private static final String RECENT_DOCUMENTS_KEY_PREFIX = "recent_documents:";
+
     @Override
-    public List<Document> getUserAllDocumentInfo(String userId) {
+    public List<DocumentInfoVO> getUserAllDocumentInfo(String userId) {
         String cacheKey = "user:" + userId + ":documents";
 
-        // 尝试从Redis缓存中获取文档信息
-        List<Document> documents = (List<Document>) redisTemplate.opsForValue().get(cacheKey);
+        //List<DocumentInfoVO> documents = (List<DocumentInfoVO>) redisTemplate.opsForValue().get(cacheKey);
+
+        List<DocumentInfoVO> documents = null;
 
         if (documents == null) {
-            // 如果缓存中不存在文档信息，则从数据库中获取
             QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("user_id", userId);
-            documents = documentMapper.selectList(queryWrapper);
+            queryWrapper.orderByDesc("update_time");
+            List<Document> documentsFromDb = documentMapper.selectList(queryWrapper);
 
-            if (documents != null && !documents.isEmpty()) {
-                // 将获取到的文档信息存储到Redis缓存中，并设置过期时间
-                redisTemplate.opsForValue().set(cacheKey, documents);
-                redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
+            if (documentsFromDb != null && !documentsFromDb.isEmpty()) {
+                documents = new ArrayList<>();
+                for (Document document : documentsFromDb) {
+                    String nickname = userDubboService.getUserInfoByUserId(Long.valueOf(userId)).getNickname();
+                    boolean isFavorited = checkIfDocumentIsFavorited(userId, document.getId());
+
+                    DocumentInfoVO infoVO = new DocumentInfoVO();
+                    BeanUtils.copyProperties(document, infoVO);
+                    infoVO.setCreateUserNickname(nickname);
+                    infoVO.setIsFavorite(isFavorited);
+                    documents.add(infoVO);
+                }
+/*                redisTemplate.opsForValue().set(cacheKey, documents);
+                redisTemplate.expire(cacheKey, 2, TimeUnit.HOURS);*/
             }
+        } else {
+            documents.sort(Comparator.comparing(DocumentInfoVO::getUpdateTime).reversed());
         }
 
         return documents;
+    }
+
+
+    private boolean checkIfDocumentIsFavorited(String userId, Long documentId) {
+
+        QueryWrapper<FavoriteDocument> queryWrapper = new QueryWrapper<>();
+
+        queryWrapper.eq("user_id", userId).eq("document_id", documentId);
+
+        int count = favoriteDocumentMapper.selectCount(queryWrapper);
+        return count > 0;
     }
 
     @Override
     public Document getDocumentById(Long documentId) {
         String cacheKey = "document:" + documentId;
 
-        // 尝试从Redis缓存中获取文档
+        Document document = new Document();
+        // 如果缓存中不存在该文档信息，则从数据库中获取
+        QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("id", documentId);
+        document = documentMapper.selectOne(queryWrapper);
+
+
+/*        // 尝试从Redis缓存中获取文档
         Document document = (Document) redisTemplate.opsForValue().get(cacheKey);
 
         if (document != null) {
@@ -88,11 +127,11 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
             if (document != null) {
                 // 将获取到的文档信息存储到Redis缓存中，并设置过期时间
                 redisTemplate.opsForValue().set(cacheKey, document);
-                redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
-            }
+                redisTemplate.expire(cacheKey, 7, TimeUnit.HOURS);
+            }*/
 
             return document;
-        }
+
     }
 
 
@@ -239,4 +278,15 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
         return insert>0;
     }
 
+    public void recordDocumentAccess(Long userId, Long documentId) {
+        String key = RECENT_DOCUMENTS_KEY_PREFIX + userId;
+        String value = String.valueOf(documentId);
+        long currentTime = System.currentTimeMillis();
+
+        redisTemplate.opsForZSet().add(key, value, currentTime);
+
+        redisTemplate.opsForZSet().removeRange(key, 0, -51);
+
+        redisTemplate.expire(key, 1, TimeUnit.HOURS);
+    }
 }
