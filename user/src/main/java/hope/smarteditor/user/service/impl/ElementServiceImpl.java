@@ -91,6 +91,16 @@ public class ElementServiceImpl extends ServiceImpl<ElementMapper, Element>
         elementMapper.updateById(element);
         return "修改成功";
     }
+
+    @Override
+    public Object addElement(Long id, Long userId) {
+        Element element = new Element();
+        Element element1 = elementMapper.selectById(id);
+        BeanUtils.copyProperties(element1, element);
+        element.setId(null);
+        element.setUserId(userId);
+        return elementMapper.insert(element);
+    }
 }
 
 

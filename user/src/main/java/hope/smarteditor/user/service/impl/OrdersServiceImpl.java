@@ -18,6 +18,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
+import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -46,12 +47,17 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         BeanUtils.copyProperties(orderBuyPointsDTO, orders);
         orders.setOrderTime(new Date());
         orders.setStatus("待支付");
+        // 创建 DecimalFormat 对象，指定格式为保留两位小数
+        DecimalFormat decimalFormat = new DecimalFormat("#.##");
+
+        // 设置 orders 对象的 amount 属性为两位小数
+        orders.setAmount(Double.parseDouble(decimalFormat.format(orderBuyPointsDTO.getAmount() * 0.1)));
 
         // 将订单信息存入Redis，设置过期时间为5分钟
         ordersMapper.insert(orders);
         long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(30);
         stringRedisTemplate.opsForZSet().add("orders", orders.getId().toString(), expireAt);
-        return Result.success("成功");
+        return Result.success(orders);
     }
 
     @Override

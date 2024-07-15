@@ -24,4 +24,6 @@ public interface ElementService extends IService<Element> {
 
     String editElement(ElementDTO elementDTO);
 
+    Object addElement(Long id, Long userId);
+
 }
