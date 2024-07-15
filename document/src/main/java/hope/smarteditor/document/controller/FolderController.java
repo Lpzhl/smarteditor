@@ -5,8 +5,10 @@ import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.common.model.dto.*;
 import hope.smarteditor.common.model.entity.Document;
+import hope.smarteditor.common.model.entity.DocumentFolder;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
+import hope.smarteditor.document.mapper.DocumentFolderMapper;
 import hope.smarteditor.document.service.DocumentService;
 import hope.smarteditor.document.service.FolderService;
 import io.swagger.annotations.Api;
@@ -28,6 +30,9 @@ public class FolderController {
 
     @Autowired
     private DocumentService documentService;
+
+    @Autowired
+    private DocumentFolderMapper documentFolderMapper;
 
     /**
      * 用户创建文件夹
@@ -129,7 +134,43 @@ public class FolderController {
     @ApiOperation("获取一个用户的所有文件夹文档信息")
     public Result getFolderDocument(HttpServletRequest request){
         Long userId = Long.valueOf(request.getHeader("userId"));
+        System.out.println(folderService.getFolderDocument(userId));
         return Result.success(folderService.getFolderDocument(userId), ErrorCode.SUCCESS.getCode(), MessageConstant.OPERATION_SUCCESSFUL);
     }
+
+    /**
+     * 将文档放入默认的文件夹中
+     */
+     @PostMapping("/moveDocumentToDefault")
+     @LzhLog
+     @ApiOperation("将文档放入默认的文件夹中")
+     public Result moveDocumentToDefault(@RequestBody MoveDocumentToFolderDTO moveDocumentToFolderDTO){
+         DocumentFolder documentFolder = new DocumentFolder();
+         documentFolder.setDocumentId(moveDocumentToFolderDTO.getDocumentId());
+         documentFolder.setFolderId(moveDocumentToFolderDTO.getFolderId());
+         return Result.success(documentFolderMapper.insert(documentFolder), ErrorCode.SUCCESS.getCode(), MessageConstant.MOVE_SUCCESSFUL);
+     }
+
+    /**
+     * 根据文件夹id获取文件夹中所有的文档信息
+     */
+     @GetMapping("/getDocumentByFolderId")
+     @LzhLog
+     @ApiOperation("根据文件夹id获取文件夹中所有的文档信息")
+     public Result getDocumentByFolderId(@RequestParam Long folderId){
+           return Result.success(folderService.getDocumentByFolderId(folderId), ErrorCode.SUCCESS.getCode(), MessageConstant.OPERATION_SUCCESSFUL);
+     }
+
+    /**
+     * 删除某个用户的最近文档
+     */
+     @PostMapping("/deleteRecentDocument/{documentId}")
+     @LzhLog
+     @ApiOperation("删除某个用户的最近文档")
+    public Result deleteRecentDocument(@PathVariable Long documentId,HttpServletRequest request){
+        Long userId = Long.valueOf(request.getHeader("userId"));
+        return Result.success(folderService.deleteRecentDocument(documentId,userId), ErrorCode.SUCCESS.getCode(), MessageConstant.DELETE_SUCCESSFUL);
+    }
+
 
 }
