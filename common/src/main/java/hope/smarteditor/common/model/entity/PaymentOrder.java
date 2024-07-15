@@ -13,6 +13,8 @@ public class PaymentOrder {
     private Integer orderId;
     private BigDecimal totalPrice;
 
+    private String orderType;
+
     public String getEncodedOrderId(String orderTypePrefix) {
         return orderTypePrefix + this.orderId.toString();
     }
