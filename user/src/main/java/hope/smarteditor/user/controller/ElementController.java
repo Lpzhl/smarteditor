@@ -10,6 +10,8 @@ import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+
 @RestController
 @RequestMapping("/element")
 @Api(tags = "素材相关")
@@ -53,7 +55,7 @@ public class ElementController {
     /**
      * 用户上传素材
      */
-    @GetMapping("upload")
+    @PostMapping("/upload")
     @LzhLog
     @ApiOperation(value = "用户上传素材")
     public Result uploadElement(@RequestBody ElementDTO elementDTO){
@@ -64,11 +66,22 @@ public class ElementController {
     /**
      * 用户编辑素材
      */
-    @GetMapping("edit")
+    @PostMapping("/edit")
     @LzhLog
     @ApiOperation(value = "用户编辑素材")
     public Result editElement(@RequestBody ElementDTO elementDTO){
         return Result.success(elementService.editElement(elementDTO));
     }
+
+    /**
+     * 将素材添加为自己的素材
+     */
+    @PostMapping("add/{id}")
+     @LzhLog
+     @ApiOperation(value = "将素材添加为自己的素材")
+     public Result addElement(@PathVariable ("id") Long id, HttpServletRequest request){
+         Long userId = (Long) request.getSession().getAttribute("userId");
+         return Result.success(elementService.addElement(id,userId));
+     }
 
 }
