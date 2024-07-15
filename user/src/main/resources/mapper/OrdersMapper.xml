@@ -8,7 +8,7 @@
             <id property="id" column="id" jdbcType="BIGINT"/>
             <result property="userId" column="user_id" jdbcType="BIGINT"/>
             <result property="orderType" column="order_type" jdbcType="VARCHAR"/>
-            <result property="amount" column="amount" jdbcType="INTEGER"/>
+            <result property="amount" column="amount" jdbcType="DOUBLE"/>
             <result property="orderTime" column="order_time" jdbcType="TIMESTAMP"/>
             <result property="status" column="status" jdbcType="VARCHAR"/>
             <result property="description" column="description" jdbcType="VARCHAR"/>
