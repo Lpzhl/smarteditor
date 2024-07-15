@@ -7,9 +7,11 @@ import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.model.entity.Folder;
 import hope.smarteditor.common.model.vo.SearchVO;
 import hope.smarteditor.common.result.Result;
+import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.service.DocumentService;
 import hope.smarteditor.document.service.FolderService;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,10 +51,12 @@ public class SearchController {
      * 根据名字搜索 文档和文件夹
      */
     @GetMapping("byName")
+    @LzhLog
+    @ApiOperation("根据名字搜索 文档和文件夹")
     public Result<SearchVO> search(@RequestParam("keyword") String keyword, HttpServletRequest request) {
-        Long userId = Long.valueOf(request.getHeader("userId"));
 
-        // Redis key
+        Long userId = Long.valueOf(request.getHeader("userId"));
+/*        // Redis key
         String redisKey = "search:" + userId;
 
         // 先在redis中搜索
@@ -64,7 +68,7 @@ public class SearchController {
             } catch (JsonProcessingException e) {
                 log.error("从Redis缓存解析JSON时出错", e);
             }
-        }
+        }*/
 
         // 如果没有缓存结果，再在数据库中搜索
         List<Document> documents = documentService.searchDocumentsByName(keyword, userId);
@@ -75,14 +79,14 @@ public class SearchController {
         searchResult.setDocuments(documents);
         searchResult.setFolders(folders);
 
-        // 将结果缓存到 Redis
+/*        // 将结果缓存到 Redis
         try {
             String searchResultJson = objectMapper.writeValueAsString(searchResult);
             redisTemplate.opsForHash().put(redisKey, keyword, searchResultJson);
             redisTemplate.expire(redisKey, 10, TimeUnit.MINUTES);  // 设置过期时间
         } catch (JsonProcessingException e) {
             log.error("将SearchVO转换为JSON时出错", e);
-        }
+        }*/
 
         return Result.success(searchResult);
     }
@@ -91,9 +95,21 @@ public class SearchController {
      * 根据创建者名字搜索 文档和文件夹
      */
     @GetMapping("byCreator")
+    @LzhLog
+    @ApiOperation(value = "根据创建者名字搜索 文档和文件夹")
     public Result<List<Folder> >searchByCreator(@RequestParam("keyword") String keyword, HttpServletRequest request) {
         Long userId = Long.valueOf(request.getHeader("userId"));
         return Result.success(documentService.searchDocumentsByCreator(keyword, userId));
-
     }
+
+    /**
+     * 根据正文内容搜索文档
+     */
+     @GetMapping("byContent")
+     @LzhLog
+     @ApiOperation(value = "根据正文内容搜索文档")
+     public Result<SearchVO> searchByContent(@RequestParam("keyword") String keyword, HttpServletRequest request) {
+           Long userId = Long.valueOf(request.getHeader("userId"));
+          return Result.success(documentService.searchDocumentsByContent(keyword, userId));
+     }
 }
