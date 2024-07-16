@@ -16,6 +16,8 @@ import lombok.Data;
 @TableName(value ="document_operation")
 @Data
 public class DocumentOperation implements Serializable {
+
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long documentId;
