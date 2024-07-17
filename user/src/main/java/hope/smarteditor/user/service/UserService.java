@@ -8,6 +8,7 @@ import hope.smarteditor.common.model.vo.BaiduResultVO;
 import hope.smarteditor.common.model.vo.OcrVO;
 import io.minio.errors.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.security.InvalidKeyException;
@@ -19,6 +20,8 @@ import java.util.List;
 * @description 针对表【user】的数据库操作Service
 * @createDate 2024-05-13 20:51:50
 */
+
+@Service
 public interface UserService extends IService<User> {
 
     User login(UserLoginDTO userLoginDTO);
@@ -62,4 +65,6 @@ public interface UserService extends IService<User> {
     String dataVisualization(String text, String imageType);
 
     User findByUsername(String username);
+
+    String translate(String text);
 }

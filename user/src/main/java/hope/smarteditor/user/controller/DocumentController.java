@@ -2,28 +2,30 @@ package hope.smarteditor.user.controller;
 
 
 import hope.smarteditor.api.DocumentDubboService;
+import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.common.model.dto.FavoriteDocumentDTO;
 import hope.smarteditor.common.model.dto.FavoriteTemplateDTO;
 import hope.smarteditor.common.model.dto.UserDocumentLikeDTO;
 import hope.smarteditor.common.model.entity.Document;
+import hope.smarteditor.common.model.vo.DocumentInfoVO;
 import hope.smarteditor.common.model.vo.FavoriteDocumentVO;
 import hope.smarteditor.common.model.vo.FavoriteTemplateVO;
 import hope.smarteditor.common.result.Result;
-import hope.smarteditor.document.annotation.LzhLog;
+import hope.smarteditor.user.annotation.LzhLog;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.dubbo.config.annotation.DubboReference;
+
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/document")
+@RequestMapping("/documents")
 @Api(tags = "文档相关接口")
 public class DocumentController {
 
-    @DubboReference
+    @DubboReference(version = "1.0.0", group = "document", check = false)
     private DocumentDubboService documentDubboService;
-
 
     /**
      * 获取用户所有文档信息
@@ -33,7 +35,7 @@ public class DocumentController {
     @GetMapping("/getAllUserDocument/{userId}")
     @LzhLog
     @ApiOperation("获取用户所有文档信息")
-    public Result<List<Document>> getAllUserDocument(@PathVariable Long userId) {
+    public Result<List<DocumentInfoVO>> getAllUserDocument(@PathVariable("userId") Long userId) {
         return Result.success(documentDubboService.getUserAllDocumentInfo(String.valueOf(userId)));
     }
 
@@ -46,7 +48,7 @@ public class DocumentController {
     @GetMapping("/getDocumentById/{documentId}")
     @LzhLog
     @ApiOperation("获取文档信息")
-    public Result<Document> getDocumentById(@PathVariable Long documentId) {
+    public Result<Document> getDocumentById(@PathVariable("documentId") Long documentId) {
         return Result.success(documentDubboService.getDocumentById(documentId));
     }
 
@@ -59,7 +61,7 @@ public class DocumentController {
     @ApiOperation("收藏或取消收藏文档")
     public Result toggleFavoriteDocument(@RequestBody FavoriteDocumentDTO favoriteDocumentDTO) {
         boolean isFavorited = documentDubboService.toggleFavoriteDocument(favoriteDocumentDTO);
-        return isFavorited ? Result.success("已收藏") : Result.success("已取消收藏");
+        return isFavorited ? Result.success(MessageConstant.ALREADY_FAVORITED) : Result.success(MessageConstant.FAVORITE_CANCELED);
     }
 
     /**
@@ -72,7 +74,7 @@ public class DocumentController {
     @ApiOperation("收藏或取消收藏模板")
     public Result toggleFavoriteTemplate(@RequestBody FavoriteTemplateDTO favoriteTemplateDTO) {
         boolean isFavorited = documentDubboService.toggleFavoriteTemplate(favoriteTemplateDTO);
-        return Result.success(isFavorited ? "已收藏" : "已取消收藏");
+        return Result.success(isFavorited ? MessageConstant.ALREADY_FAVORITED :MessageConstant.FAVORITE_CANCELED);
     }
 
 
@@ -84,7 +86,7 @@ public class DocumentController {
     @GetMapping("/userFavoriteDocuments/{userId}")
     @LzhLog
     @ApiOperation("获取用户的所有收藏文档")
-    public Result getUserFavoriteDocuments(@PathVariable Long userId) {
+    public Result getUserFavoriteDocuments(@PathVariable("userId") Long userId) {
         List<FavoriteDocumentVO> favoriteDocuments = documentDubboService.getUserFavoriteDocuments(userId);
         return Result.success(favoriteDocuments);
     }
@@ -97,7 +99,7 @@ public class DocumentController {
     @GetMapping("/userFavoriteTemplates/{userId}")
     @LzhLog
     @ApiOperation("获取用户的所有收藏模板")
-    public Result getUserFavoriteTemplates(@PathVariable Long userId) {
+    public Result getUserFavoriteTemplates(@PathVariable("userId") Long userId) {
         List<FavoriteTemplateVO> favoriteTemplates = documentDubboService.getUserFavoriteTemplates(userId);
         return Result.success(favoriteTemplates);
     }
@@ -113,8 +115,10 @@ public class DocumentController {
     @ApiOperation("点赞或取消点赞文档")
     public Result likeDocument(@RequestBody UserDocumentLikeDTO userDocumentLikeDTO){
         boolean b = documentDubboService.likeDocument(userDocumentLikeDTO.getDocumentId(), userDocumentLikeDTO.getUserId());
-        return b ? Result.success("已点赞"):Result.success("已取消点赞");
+        return b ? Result.success(MessageConstant.ALREADY_LIKED):Result.success(MessageConstant.FAVORITE_CANCELED);
     }
+
+
 
 
 

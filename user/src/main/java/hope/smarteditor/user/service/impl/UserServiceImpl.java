@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static hope.smarteditor.common.constant.IpConstant.BASE_URL;
 
 
 /**
@@ -48,6 +47,7 @@ import static hope.smarteditor.common.constant.IpConstant.BASE_URL;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     implements UserService{
+    public  static final String BASE_URL = "https://f504iccf72ke3bha.aistudio-hub.baidu.com";
 
     @Autowired
     private UserMapper userMapper;
@@ -586,6 +586,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public User findByUsername(String username) {
         return userMapper.findByUsername(username);
+    }
+
+    @Override
+    public String translate(String text) {
+        String url = BASE_URL + "/textTranslation";
+        try {
+            HttpResponse response = HttpRequest.post(url)
+                    .form("text", text)
+                    .execute();
+            String body = response.body();
+            JsonObject jsonObject = JsonParser.parseString(body).getAsJsonObject();
+            String answer = jsonObject.get("answer").getAsString();
+            return answer;
+        }catch (Exception e) {
+            System.err.println("请求失败：" + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private String Md5Crypt(String password) {

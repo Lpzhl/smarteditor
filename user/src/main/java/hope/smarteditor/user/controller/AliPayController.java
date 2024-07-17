@@ -31,7 +31,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/alipay")
-@Api(tags = "Ö§¸¶±¦Ö§¸¶½Ó¿Ú")
+@Api(tags = "æ”¯ä»˜å®æ”¯ä»˜æ¥å£")
 public class AliPayController {
 
 
@@ -51,35 +51,35 @@ public class AliPayController {
     private OrdersMapper ordersMapper;
 
     @GetMapping("/pay")
-    @ApiOperation(value = "Ö§¸¶±¦Ö§¸¶½Ó¿Ú")
+    @ApiOperation(value = "æ”¯ä»˜å®æ”¯ä»˜æ¥å£")
     @LzhLog
     public String pay(PaymentOrder paymentOrder, @RequestParam String orderType) {
         AlipayTradePagePayResponse response;
         try {
-            // ÉèÖÃreturn_url
+            // è®¾ç½®return_url
             String returnUrl = "http://8qeqvk.natappfree.cc/alipay/payment-success";
 
-            // »ñÈ¡±àÂëºóµÄ¶©µ¥ ID
+            // è·å–ç¼–ç åçš„è®¢å• ID
             String orderTypePrefix = orderType.equals("points") ? "points_" : "membership_";
             String encodedOrderId = paymentOrder.getEncodedOrderId(orderTypePrefix);
 
-            // ·¢ÆğAPIµ÷ÓÃ£¨ÒÔ´´½¨µ±Ãæ¸¶ÊÕ¿î¶şÎ¬ÂëÎªÀı£©
+            // å‘èµ·APIè°ƒç”¨ï¼ˆä»¥åˆ›å»ºå½“é¢ä»˜æ”¶æ¬¾äºŒç»´ç ä¸ºä¾‹ï¼‰
             response = Factory.Payment.Page()
                     .pay(paymentOrder.getOrderName(), encodedOrderId, String.valueOf(paymentOrder.getTotalPrice()), returnUrl);
         } catch (Exception e) {
-            System.err.println("µ÷ÓÃÔâÓöÒì³££¬Ô­Òò£º" + e.getMessage());
+            System.err.println("è°ƒç”¨é­é‡å¼‚å¸¸ï¼ŒåŸå› ï¼š" + e.getMessage());
             throw new RuntimeException(e.getMessage(), e);
         }
         return response.getBody();
     }
 
 
-    @PostMapping("/notify")  // ×¢ÒâÕâÀï±ØĞëÊÇPOST½Ó¿Ú
+    @PostMapping("/notify")  // æ³¨æ„è¿™é‡Œå¿…é¡»æ˜¯POSTæ¥å£
     @LzhLog
-    @ApiOperation(value = "Ö§¸¶±¦Òì²½»Øµ÷½Ó¿Ú")
+    @ApiOperation(value = "æ”¯ä»˜å®å¼‚æ­¥å›è°ƒæ¥å£")
     public String payNotify(HttpServletRequest request) throws Exception {
         if (request.getParameter("trade_status").equals("TRADE_SUCCESS")) {
-            System.out.println("=========Ö§¸¶±¦Òì²½»Øµ÷========");
+            System.out.println("=========æ”¯ä»˜å®å¼‚æ­¥å›è°ƒ========");
 
             Map<String, String> params = new HashMap<>();
             Map<String, String[]> requestParams = request.getParameterMap();
@@ -95,54 +95,54 @@ public class AliPayController {
             String bookingId = parts[1];
             String name = params.get("subject");
             String price = params.get("total_amount");
-            // Ö§¸¶±¦ÑéÇ©
+            // æ”¯ä»˜å®éªŒç­¾
             if (Factory.Payment.Common().verifyNotify(params)) {
-                // ÑéÇ©Í¨¹ı
-                System.out.println("½»Ò×Ãû³Æ: " + params.get("subject"));
-                System.out.println("½»Ò××´Ì¬: " + params.get("trade_status"));
-                System.out.println("Ö§¸¶±¦½»Ò×Æ¾Ö¤ºÅ: " + params.get("trade_no"));
-                System.out.println("ÉÌ»§¶©µ¥ºÅ: " + params.get("out_trade_no"));
-                System.out.println("½»Ò×½ğ¶î: " + params.get("total_amount"));
-                System.out.println("Âò¼ÒÔÚÖ§¸¶±¦Î¨Ò»id: " + params.get("buyer_id"));
-                System.out.println("Âò¼Ò¸¶¿îÊ±¼ä: " + params.get("gmt_payment"));
-                System.out.println("Âò¼Ò¸¶¿î½ğ¶î: " + params.get("buyer_pay_amount"));
-                ordersService.updateOrderStatus(Integer.parseInt(bookingId), "ÒÑÍê³É");
-                // ´¦ÀíÖ§¸¶³É¹¦µÄÂß¼­
+                // éªŒç­¾é€šè¿‡
+                System.out.println("äº¤æ˜“åç§°: " + params.get("subject"));
+                System.out.println("äº¤æ˜“çŠ¶æ€: " + params.get("trade_status"));
+                System.out.println("æ”¯ä»˜å®äº¤æ˜“å‡­è¯å·: " + params.get("trade_no"));
+                System.out.println("å•†æˆ·è®¢å•å·: " + params.get("out_trade_no"));
+                System.out.println("äº¤æ˜“é‡‘é¢: " + params.get("total_amount"));
+                System.out.println("ä¹°å®¶åœ¨æ”¯ä»˜å®å”¯ä¸€id: " + params.get("buyer_id"));
+                System.out.println("ä¹°å®¶ä»˜æ¬¾æ—¶é—´: " + params.get("gmt_payment"));
+                System.out.println("ä¹°å®¶ä»˜æ¬¾é‡‘é¢: " + params.get("buyer_pay_amount"));
+                ordersService.updateOrderStatus(Integer.parseInt(bookingId), "å·²å®Œæˆ");
+                // å¤„ç†æ”¯ä»˜æˆåŠŸçš„é€»è¾‘
                 if (type.equals("points")) {
-                    // ¸üĞÂ¶©µ¥Î´ÒÑÖ§¸¶
+                    // æ›´æ–°è®¢å•æœªå·²æ”¯ä»˜
                     Orders orders1 = ordersMapper.selectById(Integer.parseInt(bookingId));
                     User user = userMapper.selectById(orders1.getUserId());
                     user.setMoney(user.getMoney() + orders1.getNum());
                     userMapper.updateById(user);
 
-                    // ·¢ËÍWebSocketÏûÏ¢
-                    //String message = "Ö§¸¶³É¹¦£¬¶©µ¥ºÅ£º" + bookingId;
+                    // å‘é€WebSocketæ¶ˆæ¯
+                    //String message = "æ”¯ä»˜æˆåŠŸï¼Œè®¢å•å·ï¼š" + bookingId;
                     //myWebSocketHandler.sendMessage(message);
-              /*  // ·¢²¼Ö§¸¶³É¹¦ÏûÏ¢µ½ Redis
-                stringRedisTemplate.convertAndSend("paymentSuccess", "Ö§¸¶³É¹¦£¬¶©µ¥ºÅ£º" + bookingId);*/
+              /*  // å‘å¸ƒæ”¯ä»˜æˆåŠŸæ¶ˆæ¯åˆ° Redis
+                stringRedisTemplate.convertAndSend("paymentSuccess", "æ”¯ä»˜æˆåŠŸï¼Œè®¢å•å·ï¼š" + bookingId);*/
                     if (type.equals("membership")) {
                         Membership membership = new Membership();
                         Orders orders = ordersService.getById(Integer.parseInt(bookingId));
                         String description = orders.getDescription();
 
-                        int days = orders.getNum(); // »áÔ±ÔÂÊı£¬ÕâÀï¼ÙÉèÊÇÌìÊı£¬¸ù¾İÊµ¼ÊÇé¿öµ÷Õû
+                        int days = orders.getNum(); // ä¼šå‘˜æœˆæ•°ï¼Œè¿™é‡Œå‡è®¾æ˜¯å¤©æ•°ï¼Œæ ¹æ®å®é™…æƒ…å†µè°ƒæ•´
 
-                        // »ñÈ¡¶©µ¥Ê±¼ä
+                        // è·å–è®¢å•æ—¶é—´
                         Timestamp orderTime = (Timestamp) orders.getOrderTime();
 
-                        // Ê¹ÓÃ Calendar ÀàÀ´½øĞĞÈÕÆÚ²Ù×÷
+                        // ä½¿ç”¨ Calendar ç±»æ¥è¿›è¡Œæ—¥æœŸæ“ä½œ
                         Calendar calendar = Calendar.getInstance();
                         calendar.setTime(orderTime);
-                        calendar.add(Calendar.DAY_OF_MONTH, days); // Ôö¼ÓÌìÊı
+                        calendar.add(Calendar.DAY_OF_MONTH, days); // å¢åŠ å¤©æ•°
 
-                        // ÉèÖÃ»áÔ±µÄÆğÊ¼ÈÕÆÚºÍ½áÊøÈÕÆÚ
+                        // è®¾ç½®ä¼šå‘˜çš„èµ·å§‹æ—¥æœŸå’Œç»“æŸæ—¥æœŸ
                         membership.setStartDate(orderTime);
                         membership.setEndDate(new Timestamp(calendar.getTimeInMillis()));
 
-                        // ²åÈë»áÔ±¼ÇÂ¼
+                        // æ’å…¥ä¼šå‘˜è®°å½•
                         membershipMapper.insert(membership);
                     }
-                    // ´ÓRedisÒÆ³ıÏà¹ØµÄ¹ıÆÚÊ±¼äÊı¾İ
+                    // ä»Redisç§»é™¤ç›¸å…³çš„è¿‡æœŸæ—¶é—´æ•°æ®
                     stringRedisTemplate.opsForZSet().remove("orders", bookingId);
                 }
             }
