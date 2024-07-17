@@ -1,5 +1,6 @@
 package hope.smarteditor.common.model.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -36,6 +37,11 @@ public class UserVO implements Serializable {
     private String nickname;
     @ApiModelProperty("用户头像")
     private String avatar;
+
+
+    @ApiModelProperty("会员购到期时间")
+    @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date memberExpireTime;
 
 
 }
