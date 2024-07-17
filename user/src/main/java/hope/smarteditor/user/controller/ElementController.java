@@ -47,7 +47,6 @@ public class ElementController {
     @GetMapping("user/{userId}")
     @LzhLog
     @ApiOperation(value = "获取某个用户的所有素材")
-
     public Result getUserElement(@PathVariable("userId") Long userId){
         return Result.success(elementService.getUserElement(userId));
     }
