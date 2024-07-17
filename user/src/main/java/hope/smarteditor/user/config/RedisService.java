@@ -12,6 +12,7 @@ public class RedisService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+
     public void setLike(String key, Object value) {
         redisTemplate.opsForValue().set(key, value, 10, TimeUnit.DAYS);
     }
