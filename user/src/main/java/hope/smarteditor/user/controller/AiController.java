@@ -155,13 +155,7 @@ public class AiController {
      @ApiOperation("表格识别")
      @LzhLog
      public Result ocrTable(@RequestParam("file") MultipartFile file) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
-         String s = userService.ocrTable(file);
-         if (s!=null)  {
-            return Result.success(userService.ocrTable(file),ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
-        } else {
-            return Result.error(MessageConstant.FILE_UPLOAD_FAILED,500);
-        }
-
+         return Result.success(userService.ocrTable(file),ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
      }
 
     /**
@@ -171,12 +165,7 @@ public class AiController {
      @ApiOperation("音频识别ASR")
      @LzhLog
      public Result asr(@RequestParam("file") MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
-         String s = userService.asr(file);
-         if (s!=null)  {
             return Result.success(userService.asr(file),ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
-        } else {
-            return Result.error(MessageConstant.FILE_UPLOAD_FAILED,500);
-        }
      }
 
     /**
@@ -297,4 +286,21 @@ public class AiController {
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
      }
 
+    /**
+     * 思维导图
+     */
+     @PostMapping("/mindMap")
+
+ @ApiOperation("思维导图")
+
+ @LzhLog
+
+ public Result mindMap(@RequestParam("text") String text)   {
+         String s = userService.mindMap(text);
+        if (s == null) {
+            return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
+        }
+        return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
+
+     }
 }
