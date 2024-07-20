@@ -3,6 +3,7 @@ package hope.smarteditor.document.controller;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.common.result.Result;
+import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.service.DocumentService;
 import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ public class FileUploadController {
     private DocumentService documentService;
 
     @PostMapping("/upload")
+    @LzhLog
     public Result uploadFile(@RequestParam("file") MultipartFile file) throws Exception {
         String fileUrl = documentService.uploadFile(file);
         System.out.println("fileUrl = " + fileUrl);

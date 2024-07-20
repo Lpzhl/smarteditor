@@ -10,6 +10,7 @@ import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.mapper.DocumentFolderMapper;
 import hope.smarteditor.document.service.DocumentService;
+import hope.smarteditor.document.service.FolderOperationLogService;
 import hope.smarteditor.document.service.FolderService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -33,6 +34,9 @@ public class FolderController {
 
     @Autowired
     private DocumentFolderMapper documentFolderMapper;
+
+    @Autowired
+    private FolderOperationLogService folderOperationLogService;
 
     /**
      * 用户创建文件夹
@@ -134,7 +138,6 @@ public class FolderController {
     @ApiOperation("获取一个用户的所有文件夹文档信息")
     public Result getFolderDocument(HttpServletRequest request){
         Long userId = Long.valueOf(request.getHeader("userId"));
-        System.out.println(folderService.getFolderDocument(userId));
         return Result.success(folderService.getFolderDocument(userId), ErrorCode.SUCCESS.getCode(), MessageConstant.OPERATION_SUCCESSFUL);
     }
 
@@ -171,6 +174,17 @@ public class FolderController {
         Long userId = Long.valueOf(request.getHeader("userId"));
         return Result.success(folderService.deleteRecentDocument(documentId,userId), ErrorCode.SUCCESS.getCode(), MessageConstant.DELETE_SUCCESSFUL);
     }
+
+    /**
+     * 获取某个文件夹的所有操作日志
+     */
+     @GetMapping("/getFolderLog/{folderId}")
+     @LzhLog
+     @ApiOperation("获取某个文件夹的所有操作日志")
+
+ public Result getFolderLog(@PathVariable("folderId") Long folderId){
+     return Result.success(folderOperationLogService.getFolderLog(folderId), ErrorCode.SUCCESS.getCode(), MessageConstant.OPERATION_SUCCESSFUL);
+     }
 
 
 }

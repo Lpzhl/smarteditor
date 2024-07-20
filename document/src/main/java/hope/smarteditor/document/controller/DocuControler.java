@@ -1,6 +1,7 @@
 package hope.smarteditor.document.controller;
 
 import hope.smarteditor.common.model.entity.Docu;
+import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.service.DocuService;
 import io.swagger.annotations.Api;
@@ -25,7 +26,7 @@ public class DocuControler {
     @GetMapping("/getCategories")
     @LzhLog
     @ApiOperation(value = "获取分类")
-    public Map<String, List<String>> getCategories() {
+    public Result getCategories() {
         List<String> professions = docuService.getProfessionCategories();
         List<String> subjects = docuService.getSubjectCategories();
 
@@ -33,14 +34,14 @@ public class DocuControler {
         categories.put("professions", professions);
         categories.put("subjects", subjects);
         System.out.println("categories = " + categories);
-        return categories;
+        return Result.success(categories);
     }
 
     @GetMapping("/getArticles")
     @ApiOperation(value = "获取文献")
     @LzhLog
-    public List<Docu> getArticles() {
-        return docuService.getList();
+    public Result  getArticles() {
+        return Result.success(docuService.getList());
     }
 
     /**
@@ -49,9 +50,8 @@ public class DocuControler {
     @GetMapping("/search")
     @ApiOperation(value = "全局模糊搜索")
     @LzhLog
-    public List<Docu> search(@RequestParam String keyword) {
-        System.out.println("keyword = " + keyword);
-        return docuService.search(keyword);
+    public Result search(@RequestParam String keyword) {
+        return Result.success(docuService.search(keyword));
     }
 
 }

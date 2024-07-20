@@ -2,10 +2,10 @@ package hope.smarteditor.document.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.common.model.dto.ShareDTO;
-import hope.smarteditor.common.model.dto.UserLoginDTO;
-import hope.smarteditor.common.model.entity.RecentDocuments;
+
 import hope.smarteditor.common.model.entity.Share;
-import hope.smarteditor.common.model.vo.RecentDocumentsVO;
+import hope.smarteditor.common.model.vo.DocumentInfoVO;
+
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.mapper.RecentDocumentsMapper;
@@ -97,10 +97,17 @@ public class ShareController {
         recentDocumentsService.recordDocumentAccess(userId, documentId);
     }
 
-    @GetMapping("/recent/{userId}")
+/*    @GetMapping("/recent/{userId}")
     @ApiOperation("获取最近访问的文档")
     @LzhLog
     public Result<List<RecentDocumentsVO>> getRecentDocuments(@PathVariable("userId") Long userId) {
+        return Result.success(recentDocumentsService.getRecentDocuments(userId));
+    }*/
+
+    @GetMapping("/recent/{userId}")
+    @ApiOperation("获取最近访问的文档")
+    @LzhLog
+    public Result<List<DocumentInfoVO>> getRecentDocuments(@PathVariable("userId") Long userId) {
         return Result.success(recentDocumentsService.getRecentDocuments(userId));
     }
 }

@@ -24,34 +24,45 @@ spring:
     allow-bean-definition-overriding: true
   datasource:
     druid:
+      # 设置数据源
       driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://${mysql-addr:localhost:3306}/smarteditor?useSSL=false&amp&serverTimezone=UTC
-      username: ${mysql-username:root}
-      password: ${mysql-password:123456}
+      url: jdbc:mysql://localhost:3306/smarteditor?useSSL=false&amp&serverTimezone=UTC
+      username: root
+      password: 123456
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
   redis:
-    host: ${redis-host:127.0.0.1}
+    host: ${redis-host:121.41.107.127}
     port: ${redis-port:6379}
     timeout: 1000
     password: 123456
+    database: 1
     lettuce:
       pool:
         minIdle: 30
         maxIdle: 500
         maxWait: 10000
         maxActive: 500
+  elasticsearch:
+    uris: http://localhost:9200
+
+
 
 mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
   # 设置MyBatis-Plus配置
   configuration:
     # 设置是否将下划线命名转换为驼峰命名
     map-underscore-to-camel-case: true
     # 设置日志实现类
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
   # 设置全局配置
   global-config:
     # 设置数据库配置
     db-config:
-      logic-delete-field: isDelete # 全局逻辑删除的实体字段名
+      logic-delete-field: is_deleted # 全局逻辑删除的实体字段名
       logic-delete-value: 1 # 逻辑已删除值（默认为 1）
       logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
       id-type: auto
@@ -72,11 +83,13 @@ dubbo:
     address: nacos://localhost:8848
     parameters:
       # 修改
-      namespace: cd5b4c92-4168-411c-afb5-fea7b468821e
+      #namespace: cd5b4c92-4168-411c-afb5-fea7b468821e
+      namespace: 2d53301e-9f81-423b-bed6-b42ffe8ac6c0
       # 修改
       group: dubbo
 
-  # todo 需替换配置，然后取消注释
+
+
 #  elasticsearch:
 #    uris: http://localhost:9200
 #    username: root
@@ -87,8 +100,20 @@ hope:
     # 设置jwt签名加密时使用的秘钥
     secret-key: lzsdash
     # 设置jwt过期时间
-    ttl: 323423000
+    ttl: 864000000  #10天
     # 设置前端传递过来的令牌名称
     token-name: token
 
 
+minio:
+  endpoint: http://8.130.128.14:9000
+  accessKey: minioadmin
+  secretKey: minioadmin
+  bucket-name: myfile
+
+#沙箱支付
+alipay:
+  appId: 9021000132655785
+  appPrivateKey: MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCWtCny9/aaalt08w2LAXqLOEtysjJCW6yqfzErmkUPaCD5tj6sjiVz4/oyR9jPW35MUgNzj0iL/8hr0KaVx7o24X6BOtKfSj76jkx6t4Vagt6MOvoKN4RJL9ul6hsrAiszcHtQTJeq+2TaRO/DOsRsnqN8XT3k3YVSksdR3RKRPbZ6oKqk0/XARcutP5z8sHhB63heDX1cPjMfpB6gjhpB7ILZTXD9vo86LT6suIHup85bzLhE+5/2ZP/ADVz/YjGNAVYMfjTgOfeTeA7FrL3LOt0mHXfZFGy6fvJTD5lA9yBts9//TA5Pxbf0XnET7pXJsTRG88DZe1ZpkpViGZqhAgMBAAECggEAdi8V0q/42YHc9SsCjOd89Z8RNAJg/b8s+oxCwEH8NKfhbFMqdWIIJwk7FaFYeszyj+GlSUOtjfTqdPqtGTsHYrCV57x8nmS4XP+pJHe1gZSt+GTr34VIHakFZOjho2nQ/UcRvZhDPNhnb/Ct4nm8vr3t0cLBnjDGtEndO+rV+8WonfKOapdbGNZpvgT1oXYa/q1ujbWhCynPOSedIp0EdENMfEgjUHXpYqfbzcOC4WEJY5MTw5dqXg6tbtZS2Gi7kaibXi6f4gfsDevET79TZQBcMAMPnInFaUefuP1Rl8ROw4nSY5mFdGwWwMCRgz/UlHlRa2+t/QIyrGyWcM95kQKBgQDJr8e2tdgJwZ5GzDTfcVfS1R5mZ2WbcZYORXjHjI/YbuWnwFxsysSYOzsT3blwmTMfauBPj6V0hQDZVccltQSBfC2taW3MOqOuVXUrhMqMRX5nAGsFIuE8PH4ImANoWUB861deAqS/k5Wcm61gJjotlUEHRbR5/Y5vxXs0Zaf+3QKBgQC/SaOCdHoO2dyopUvGQ5X9grcoUAtf8povaD53QmfZgVbRS/5xOdRGLnQsvjvO4y5ycEBOyy/+y61YBgwWxUt9/pXb5dW3jEyhligOE+lipg8uNuAZ4c1OxYk0NDYA/f/B8GjICHWDDl4BkgbVSV5vchvbgvAPte8k3GP+I/0UlQKBgQDED6Ioxrt+OH9Bua/IaumCJfVIfUk0BAZoVzajXcxUDPIp0gDHLZJRnnq+xDNJ91PQPdhS34RrMgRyQkW3LTJ1IZ9RzYSUHYkSpzahGJTCKahIPwrKUm78XJ30groFTYY4KZuj4xP+vFybgmbXajHyL/6oMCXS1R8LHsG3XP8j7QKBgQCdkepHzuywiRP0M908X3YRUvjPE0iba7tIq+Uw1hm3mIxMcf4RhOJwQVnfdYDMxmT/TaobfdJ2X47WAH060KCEFA+cCTJINSD2xjsOhaZtZX8BwaBOkatOZPfFcfC+Vny0Y/XcOOOb5lzXjFNmpD5PLT73Tl+zgVmSEp2nvjt+FQKBgCO4rge4sm974gmgj9B1bRKykAyKlGBp4/F0451Ws4VqdJx9tXPRMcQvHLCg6avx7L22Wgowl2YmNjaLIXqudFMxqSosZgYUH+woGcn6B0yw5aAwEvYwwsrJqsUH7IiK6RibOhNk+3KEipmIGCNLZwlsZnu31dqXzM7Pz0VKWCKK
+  alipayPublicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn4O9b1NlKgon78gqpOHEd/8bwspDoZ3/WWLbdLLuJ1XZYzPk1v+smEFH1c1rzRmzxdPv0BHFz60C/zDk01yvbNzo+5nd2GZYO1WcS76fNlwX06NT3ypACSwljl8r0qZrk3L9UYRnWn1hxtvOToMKpiYgZ9eaSQztup9suBJcwd/K34SqBsI6gEFIaizTC4XnkhObglbXIo75K20LUkF8w73pY1cM+rhaEAzUTy98WzgUp0sH96467zD3QCzS3Nk4VzGLdXWa42N+jO0IEtNTHxV0/gsjX32dQcHqsUzuK2+FcmZXl4zwTspGGvbWs4Ot9ZDM9mF/2nWNxO3AMq9F6QIDAQAB
+  notifyUrl:  http://localhost:8090/alipay/notify

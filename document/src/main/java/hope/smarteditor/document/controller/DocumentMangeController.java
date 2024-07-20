@@ -1,6 +1,8 @@
 package hope.smarteditor.document.controller;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
@@ -8,6 +10,7 @@ import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.dto.DocumentPermissionsDTO;
 import hope.smarteditor.common.model.dto.TemplateDocumentUpdateDTO;
 import hope.smarteditor.common.model.entity.Document;
+import hope.smarteditor.common.model.entity.DocumentOperation;
 import hope.smarteditor.common.model.entity.TemplateDocument;
 import hope.smarteditor.common.model.vo.DocumentShareVO;
 import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
@@ -15,17 +18,16 @@ import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.annotation.PermissionCheck;
 import hope.smarteditor.document.mapper.TemplateDocumentMapper;
-import hope.smarteditor.document.service.DocumentService;
-import hope.smarteditor.document.service.DocumentpermissionsService;
-import hope.smarteditor.document.service.RecentDocumentsService;
-import hope.smarteditor.document.service.TemplateDocumentService;
+import hope.smarteditor.document.service.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -51,6 +53,11 @@ public class DocumentMangeController {
 
     @Autowired
     private TemplateDocumentService templateDocumentService;
+
+    @Autowired
+    private DocumentOperationService documentOperationService;
+
+
     /**
      * 将在线富文本编写的文档信息上传到数据库中保存
      *  文档上传数据传输对象
@@ -60,7 +67,9 @@ public class DocumentMangeController {
     @PostMapping("/create")
     @LzhLog
     public Result<Document> upload(@RequestBody DocumentUploadDTO documentUploadDTO){
-        return Result.success(documentService.saveDocument(documentUploadDTO),ErrorCode.SUCCESS.getCode(), MessageConstant.CREATE_SUCCESSFUL);
+        Document document = documentService.saveDocument(documentUploadDTO);
+        documentService.createLog(document.getId(), document.getUserId());
+        return Result.success(document,ErrorCode.SUCCESS.getCode(), MessageConstant.CREATE_SUCCESSFUL);
     }
 
     /**
@@ -70,6 +79,7 @@ public class DocumentMangeController {
      * @param documentUpdateDTO 文档更新数据传输对象
      * @return 更新结果
      */
+
     @ApiOperation("更新文档信息")
     @PutMapping("/update/{documentId}")
     @LzhLog
@@ -77,6 +87,7 @@ public class DocumentMangeController {
     public Result<Document> updateDocument(@PathVariable("documentId") Long documentId, @RequestBody DocumentUpdateDTO documentUpdateDTO) {
         try {
             Document document = documentService.updateDocument(documentId, documentUpdateDTO);
+            documentService.saveLog(documentId, documentUpdateDTO);
             return Result.success(document);
         } catch (Exception e) {
             log.error(ErrorCode.UPDATE_FILE_ERROR.getMessage(), e);
@@ -91,10 +102,12 @@ public class DocumentMangeController {
     @PutMapping("/rename/{documentId}")
     @LzhLog
     @PermissionCheck(value = {"可管理", "可编辑"})
-    public Result renameDocument(@PathVariable("documentId") Long documentId, @RequestParam("newName") String newName) {
-        documentService.renameDocument(documentId, newName);
+    public Result renameDocument(@PathVariable("documentId") Long documentId, @RequestParam("newName") String newName,HttpServletRequest request) {
+        Long userId = Long.valueOf(request.getHeader("userId"));
+        documentService.renameDocument(documentId, newName, userId);
         return Result.success(MessageConstant.SUCCESSFUL);
     }
+
 
     /**
      * 删除文档
@@ -274,4 +287,25 @@ public class DocumentMangeController {
          return Result.success(documentId);
      }
 
+    /**
+     * 获取一个文档的所有操作日志
+     */
+     @ApiOperation("获取一个文档的所有操作日志")
+     @LzhLog
+     @GetMapping("/getDocumentLog/{documentId}")
+     public Result getDocumentLog(@PathVariable("documentId")Long documentId) {
+         List<DocumentOperation> documentLogs = documentOperationService.getDocumentLog(documentId);
+         return Result.success(documentLogs);
+     }
+
+    /**
+     * 获取模板
+     */
+     @ApiOperation("获取所有模板")
+     @LzhLog
+     @GetMapping("/getTemplateDocument")
+     public Result getTemplate()  {
+         QueryWrapper<TemplateDocument> templateDocumentQueryWrapper = new QueryWrapper<>();
+         return Result.success(templateDocumentService.list(templateDocumentQueryWrapper));
+     }
 }
