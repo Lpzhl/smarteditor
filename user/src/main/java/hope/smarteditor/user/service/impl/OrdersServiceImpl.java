@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import hope.smarteditor.common.model.dto.OrderBuyPointsDTO;
 import hope.smarteditor.common.model.dto.OrderBuyVipDTO;
 import hope.smarteditor.common.model.entity.Orders;
+import hope.smarteditor.common.model.vo.OrdersVO;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.user.service.OrdersService;
 import hope.smarteditor.user.mapper.OrdersMapper;
@@ -19,9 +20,14 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.text.DecimalFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
 * @author LoveF
@@ -60,12 +66,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         return Result.success(orders);
     }
 
-    @Override
-    public Result getUserAllOrder(String userId) {
-        QueryWrapper<Orders> ordersQueryWrapper = new QueryWrapper<>();
-        ordersQueryWrapper.eq("user_id", userId);
-        return Result.success(ordersMapper.selectList(ordersQueryWrapper));
-    }
 
     @Override
     public Result cancelOrder(String orderId) {
@@ -76,6 +76,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
     @Override
     public Result createOrderBuyVip(OrderBuyVipDTO orderBuyVipDTO) {
         Orders orders = new Orders();
+
         BeanUtils.copyProperties(orderBuyVipDTO, orders);
         orders.setOrderTime(new Date());
         orders.setStatus("待支付");
@@ -86,6 +87,42 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         stringRedisTemplate.opsForZSet().add("orders", orders.getId().toString(), expireAt);
         return Result.success("成功");
     }
+    @Override
+    public Result getUserAllOrder(String userId) {
+        QueryWrapper<Orders> ordersQueryWrapper = new QueryWrapper<>();
+        ordersQueryWrapper.eq("user_id", userId);
+        List<Orders> orders = ordersMapper.selectList(ordersQueryWrapper);
+        List<OrdersVO> ordersVOList = new ArrayList<>();
+
+        for (Orders order : orders) {
+            OrdersVO ordersVO = new OrdersVO();
+            ordersVO.setId(order.getId());
+            ordersVO.setUserId(order.getUserId());
+            ordersVO.setOrderType(order.getOrderType());
+            ordersVO.setAmount(order.getAmount());
+            ordersVO.setOrderTime(order.getOrderTime());
+            ordersVO.setStatus(order.getStatus());
+            ordersVO.setNum(order.getNum());
+
+            // 设置描述
+            if ("购买会员".equals(order.getOrderType())) {
+                ordersVO.setDescription("购买了 " + order.getNum() + " 个月会员");
+            } else if ("购买积分".equals(order.getOrderType())) {
+                ordersVO.setDescription("增加了 " + order.getNum() * 10 + " 积分");
+            }
+
+            // 设置过期时间加5分钟
+            LocalDateTime endOrderTime = order.getOrderTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().plusMinutes(5);
+            ordersVO.setEndOrderTime(endOrderTime);
+
+            // 添加到列表
+            ordersVOList.add(ordersVO);
+        }
+
+        // 返回处理后的订单列表
+        return Result.success(ordersVOList);
+    }
+
 
     @Override
     public void updateOrderStatus(int parseInt, String status) {
@@ -93,6 +130,27 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         ordersQueryWrapper.eq("id", parseInt);
         ordersMapper.update(null, new UpdateWrapper<Orders>().eq("id", parseInt).set("status", status));
     }
+
+    @Override
+    public boolean deleteOrder(String orderId) {
+        try {
+            Orders order = ordersMapper.selectById(orderId);
+            if (order == null) {
+                return false;
+            }
+
+            int rows = ordersMapper.deleteById(orderId);
+            if (rows > 0) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 
     /**
      * 自动更新订单是否过期

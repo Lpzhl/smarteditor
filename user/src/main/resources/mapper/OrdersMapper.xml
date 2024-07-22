@@ -13,11 +13,12 @@
             <result property="status" column="status" jdbcType="VARCHAR"/>
             <result property="description" column="description" jdbcType="VARCHAR"/>
             <result property="num" column="num" jdbcType="INTEGER"/>
+             <result property="isDeleted" column="is_deleted" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id,user_id,order_type,
         amount,order_time,status,
-        description,num
+        description,num,is_deleted
     </sql>
 </mapper>

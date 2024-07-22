@@ -46,7 +46,7 @@ public class OrderController {
     /**
      * 获取用户所有订单信息
      */
-    @PostMapping("/getUserAllOrder")
+    @GetMapping("/getUserAllOrder")
     @ApiOperation(value = "获取用户所有订单信息")
     public Result getUserAllOrder(HttpServletRequest request) {
         String userId = request.getHeader("userId");
@@ -60,6 +60,16 @@ public class OrderController {
      @ApiOperation(value = "取消订单")
      @LzhLog
      public Result cancelOrder(@PathVariable ("orderId") String orderId) {
-         return ordersService.cancelOrder(orderId);
+         return Result.success(ordersService.cancelOrder(orderId));
      }
+
+    /**
+     * 删除订单
+     */
+     @PostMapping("/deleteOrder/{orderId}")
+     @ApiOperation(value = "删除订单")
+     public Result deleteOrder(@PathVariable ("orderId") String orderId) {
+        return Result.success(ordersService.deleteOrder(orderId));
+     }
+
 }

@@ -1,24 +1,14 @@
-package hope.smarteditor.common.model.entity;
-
-import com.baomidou.mybatisplus.annotation.*;
-
-import java.io.Serializable;
-import java.util.Date;
+package hope.smarteditor.common.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
-/**
- *
- * @TableName orders
- */
-@TableName(value ="orders")
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.Date;
+
 @Data
-public class Orders implements Serializable {
-    /**
-     *
-     */
-    @TableId(type = IdType.AUTO)
+public class OrdersVO implements Serializable {
     private Long id;
 
     /**
@@ -42,6 +32,8 @@ public class Orders implements Serializable {
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date orderTime;
 
+    @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime endOrderTime;
     /**
      * 订单状态 (待支付, 已支付, 已完成等)
      */
@@ -54,9 +46,4 @@ public class Orders implements Serializable {
 
     private Integer num;
 
-    @TableLogic
-    private Integer isDeleted;
-
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
 }
