@@ -11,6 +11,7 @@ import hope.smarteditor.document.mapper.PermissionsMapper;
 import hope.smarteditor.document.service.DocumentpermissionsService;
 import hope.smarteditor.document.mapper.DocumentpermissionsMapper;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -26,9 +27,9 @@ import java.util.stream.Collectors;
 public class DocumentpermissionsServiceImpl extends ServiceImpl<DocumentpermissionsMapper, Documentpermissions>
     implements DocumentpermissionsService{
 
-    @Resource
+    @Autowired
     private DocumentpermissionsMapper documentpermissionsMapper;
-    @Resource
+    @Autowired
     private PermissionsMapper permissionsMapper;
 
     @Override

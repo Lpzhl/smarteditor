@@ -3,27 +3,24 @@ package hope.smarteditor.document.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.constant.AuthorityConstant;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
+import hope.smarteditor.common.constant.UserInfoConstant;
 import hope.smarteditor.common.exception.BusinessException;
-import hope.smarteditor.common.exception.GlobalExceptionHandler;
 import hope.smarteditor.common.model.dto.*;
-import hope.smarteditor.common.model.entity.Document;
-import hope.smarteditor.common.model.entity.DocumentFolder;
-import hope.smarteditor.common.model.entity.Folder;
-import hope.smarteditor.common.model.entity.FolderOperationLog;
+import hope.smarteditor.common.model.entity.*;
+import hope.smarteditor.common.model.vo.DocumentInfoVO;
 import hope.smarteditor.common.model.vo.UserFolderInfoVO;
-import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.HandleException;
-import hope.smarteditor.document.mapper.DocumentFolderMapper;
-import hope.smarteditor.document.mapper.DocumentMapper;
-import hope.smarteditor.document.mapper.mapper.FolderOperationLogMapper;
+import hope.smarteditor.document.mapper.*;
 import hope.smarteditor.document.service.FolderService;
-import hope.smarteditor.document.mapper.FolderMapper;
+import hope.smarteditor.document.service.RecentDocumentsService;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -51,6 +48,23 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
     @Autowired
     private DocumentMapper documentMapper;
 
+    @Autowired
+    private RecentDocumentsService recentDocumentsService;
+
+    @Autowired
+    private FavoriteDocumentMapper favoriteDocumentMapper;
+
+    @Autowired
+    private RecentDocumentsMapper recentDocumentsMapper;
+
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    @DubboReference(version = "1.0.0", group = "user", check = false)
+    private UserDubboService userDubboService;
+
+
     @Override
     public boolean createFolder(FolderDTO folderDTO) {
         try {
@@ -58,7 +72,13 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
             // 1.创建文件夹
             Folder folder = new Folder();
             BeanUtils.copyProperties(folderDTO,folder);
+
+
             folder.setPermissions(AuthorityConstant.VIEW);
+            // 该用户不能创建名字为默认文件夹的文件夹
+            if(folder.getName().equals(MessageConstant.UPDATE_FAILED)){
+                throw new BusinessException(ErrorCode.OPERATION_ERROR);
+            }
             int insert = folderMapper.insert(folder);
 
             // 2.创建操作日志
@@ -86,7 +106,14 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
     public boolean updateFolder(FolderUpdateDTO folderDTO,Long userId) {
         // 1.更新文件夹名字
         Folder folder = new Folder();
+
+
+
         BeanUtils.copyProperties(folderDTO, folder);
+        // 该用户不能创建名字为默认文件夹的文件夹
+        if(folder.getName().equals(MessageConstant.UPDATE_FAILED)){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR);
+        }
 
         // 2.创建操作日志
         FolderOperationLog folderOperationLog = new FolderOperationLog();
@@ -187,6 +214,15 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         return true;
     }
 
+    private boolean checkIfDocumentIsFavorited(String userId, Long documentId) {
+
+        QueryWrapper<FavoriteDocument> queryWrapper = new QueryWrapper<>();
+
+        queryWrapper.eq("user_id", userId).eq("document_id", documentId);
+
+        int count = favoriteDocumentMapper.selectCount(queryWrapper);
+        return count > 0;
+    }
     @Override
     public List<UserFolderInfoVO> getFolderDocument(Long userId) {
         try {
@@ -205,7 +241,12 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
                 // 创建文件夹文档查询条件
                 QueryWrapper<DocumentFolder> documentFolderQueryWrapper = new QueryWrapper<>();
                 documentFolderQueryWrapper.eq("folder_id", folder.getId());
-
+                // 根据文档ID列表查询文档详细信息
+                UserFolderInfoVO userFolderInfo = new UserFolderInfoVO();
+                userFolderInfo.setFolderId(folder.getId());
+                userFolderInfo.setUserId(userId);
+                userFolderInfo.setFolderName(folder.getName());
+                userFolderInfo.setPermissions(folder.getPermissions());
                 // 查询文件夹中的所有文档
                 List<DocumentFolder> documentFolders = documentFolderMapper.selectList(documentFolderQueryWrapper);
 
@@ -213,22 +254,24 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
                 List<Long> documentIds = documentFolders.stream()
                         .map(DocumentFolder::getDocumentId)
                         .collect(Collectors.toList());
-
-                // 根据文档ID列表查询文档详细信息
+                List<DocumentInfoVO> documentInfoVOList = new ArrayList<>();
+                List<Document> documents = new ArrayList<>();
                 if (!documentIds.isEmpty()) {
-                    List<Document> documents = documentMapper.selectBatchIds(documentIds);
-
-                    // 创建用户文件夹信息VO对象
-                    UserFolderInfoVO userFolderInfo = new UserFolderInfoVO();
-                    userFolderInfo.setFolderId(folder.getId());
-                    userFolderInfo.setUserId(userId);
-                    userFolderInfo.setFolderName(folder.getName());
-                    userFolderInfo.setPermissions(folder.getPermissions());
-                    userFolderInfo.setDocuments(documents);
-
-                    // 添加到返回列表中
-                    userFolderInfoList.add(userFolderInfo);
+                     documents= documentMapper.selectBatchIds(documentIds);
+                     for(Document document :documents){
+                         DocumentInfoVO documentInfoVO = new DocumentInfoVO();
+                         BeanUtils.copyProperties(document, documentInfoVO);
+                         documentInfoVOList.add(documentInfoVO);
+                         User userInfo = userDubboService.getUserInfoByUserId(document.getUserId());
+                         documentInfoVO.setCreateUserNickname(userInfo.getNickname());
+                         boolean isFavorited = checkIfDocumentIsFavorited(String.valueOf(userId), document.getId());
+                         documentInfoVO.setIsFavorite(isFavorited);
+                     }
+                    userFolderInfo.setDocuments(documentInfoVOList);
+                }else {
+                    userFolderInfo.setDocuments(documentInfoVOList);
                 }
+                userFolderInfoList.add(userFolderInfo);
             }
 
             return userFolderInfoList;
@@ -265,6 +308,35 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         return true;
     }
 
+    @Override
+    public List<Folder> searchFoldersByName(String keyword, Long userId) {
+        return folderMapper.searchFoldersByName(keyword, userId);
+    }
+
+    @Override
+    public List<Document> getDocumentByFolderId(Long folderId) {
+        // 构造查询条件
+        LambdaQueryWrapper<Document> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(Document::getId, documentFolderMapper.getDocumentIdsByFolderId(folderId))
+                .orderByDesc(Document::getUpdateTime);
+        // 执行查询
+        return documentMapper.selectList(queryWrapper);
+    }
+
+    @Override
+    public String deleteRecentDocument(Long documentId, Long userId) {
+        // 删除最近使用的文档
+        QueryWrapper<RecentDocuments> recentDocumentsQueryWrapper = new QueryWrapper<>();
+        recentDocumentsQueryWrapper.eq("user_id", userId).eq("document_id", documentId);
+        recentDocumentsMapper.delete(recentDocumentsQueryWrapper);
+
+        // 更新 Redis 中的数据
+        String key = UserInfoConstant.RECENT_DOCUMENTS_KEY_PREFIX + userId;
+        String value = String.valueOf(documentId);
+        redisTemplate.opsForZSet().remove(key, value);
+
+        return MessageConstant.SUCCESSFUL;
+    }
 
 }
 

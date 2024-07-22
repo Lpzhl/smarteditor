@@ -8,6 +8,7 @@ import hope.smarteditor.document.mapper.DocuMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,6 +42,8 @@ public class DocuServiceImpl extends ServiceImpl<DocuMapper, Docu>
 
     @Override
     public List<Docu> search(String keyword) {
+
+        List<Docu> docuList = new ArrayList<>();
         QueryWrapper<Docu> queryWrapper = new QueryWrapper<>();
         queryWrapper.like("name", keyword)
                 .or().like("context", keyword)
@@ -49,7 +52,11 @@ public class DocuServiceImpl extends ServiceImpl<DocuMapper, Docu>
                 .or().like("document_key", keyword)
                 .last("LIMIT 30");
 
-        return docuMapper.selectList(queryWrapper);
+        List<Docu> docus = docuMapper.selectList(queryWrapper);
+        if (docus != null) {
+            docuList.addAll(docus);
+        }
+        return docuList;
     }
 
 }

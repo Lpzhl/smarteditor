@@ -41,7 +41,11 @@ public class ShareServiceImpl extends ServiceImpl<ShareMapper, Share>
         // 1.查询是否已经存在该文档的分享链接
         Share share1 = new Share();
         share1.setDocumentId(documentId);
-        Share existingShare = shareMapper.selectOne(new QueryWrapper<>(share1));
+        QueryWrapper<Share> wrapper = new QueryWrapper<>();
+        wrapper.eq("document_id", documentId);
+        Share existingShare = shareMapper.selectOne(wrapper);
+
+
         if (existingShare != null) {
             return existingShare;
         }
@@ -102,7 +106,7 @@ public class ShareServiceImpl extends ServiceImpl<ShareMapper, Share>
 
     private String generateUniqueLink(Long documentId) {
         String encryptedId = DocumentIdEncryptor.encrypt(documentId);
-        return "http://192.168.43.105:5173/#/edit?" + encryptedId;
+        return "http://edit.yunfei.plus/#/big-editor?" + encryptedId;
     }
 
 

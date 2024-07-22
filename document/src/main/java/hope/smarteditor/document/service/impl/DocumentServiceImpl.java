@@ -11,15 +11,20 @@ import hope.smarteditor.common.exception.BusinessException;
 import hope.smarteditor.common.exception.GlobalExceptionHandler;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
+import hope.smarteditor.common.model.dto.TemplateDocumentUpdateDTO;
 import hope.smarteditor.common.model.entity.*;
+import hope.smarteditor.common.model.vo.DocumentShareVO;
 import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
+import hope.smarteditor.common.model.vo.SearchVO;
 import hope.smarteditor.document.mapper.*;
 import hope.smarteditor.document.service.DocumentService;
+import hope.smarteditor.document.service.FolderService;
 import io.minio.*;
 import io.minio.errors.MinioException;
 import io.minio.http.Method;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -45,6 +50,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     @Autowired
     private MinioClient minioClient;
+    @Value("${minio.bucket-name}")
+    private String bucketName;
 
     @Autowired
     private  DocumentMapper documentMapper;
@@ -54,9 +61,6 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
-
-    @Value("${minio.bucket-name}")
-    private String bucketName;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -70,8 +74,21 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
     @Autowired
     private DocumentOperationMapper documentOperationMapper;
 
+    @Autowired
+    private FolderMapper folderMapper;
+
+    @Autowired
+    private DocumentFolderMapper documentFolderMapper;
+
+
+    @Autowired
+    private TemplateDocumentMapper templateDocumentMapper;
+
     @DubboReference(version = "1.0.0", group = "user", check = false)
     private UserDubboService userDubboService;
+
+    @Autowired
+    private RecentDocumentsMapper   recentDocumentsMapper;
 
     @Override
     public String uploadFile(MultipartFile file) throws Exception{
@@ -120,6 +137,9 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
      */
     @Override
     public Document saveDocument(DocumentUploadDTO documentUploadDTO) {
+
+        documentUploadDTO.setContent("默认文本");
+
         Document document = new Document();
         document.setUserId(documentUploadDTO.getUserId());
         if(documentUploadDTO.getName() == null){
@@ -166,6 +186,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         redisTemplate.opsForValue().set(cacheKey, savedDocument);
         // 设置缓存过期时间，例如1小时
         redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
+
         return savedDocument;
     }
 
@@ -244,15 +265,6 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         String cacheKey = "document:" + documentId;
         redisTemplate.opsForValue().set(cacheKey, document);
         redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
-        String name =  userDubboService.getUserNameByUserId(userId);
-        // 记录用户操作到文档操作表
-        DocumentOperation documentOperation = new DocumentOperation();
-        documentOperation.setDocumentId(documentId);
-        documentOperation.setUserId(userId);
-        documentOperation.setOperation("编辑");
-        documentOperation.setDescription("用户 " + name + " 更新了文档《 " + documentMapper.selectById(documentId).getName()+ "》");
-        documentOperation.setOperationTime(new Date());
-        documentOperationMapper.insert(documentOperation);
 
         return document;
     }
@@ -354,11 +366,14 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
      */
     @Override
     public List<Document> getDeletedDocuments(Long userId) {
-        QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
+/*        QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId)
                 .eq("is_deleted", 1);
-       return documentMapper.selectList(queryWrapper.setEntity(null));
+       return documentMapper.selectList(queryWrapper.setEntity(null));*/
+
+        return documentMapper.getDeletedDocuments(userId);
     }
+
 
     @Override
     public List<DocumentUserPermisssVO> getParticipants(Long documentId) {
@@ -404,7 +419,182 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
         return result;
     }
+    @Override
+    public List<Document> searchDocumentsByName(String keyword, Long userId) {
+        return documentMapper.searchDocumentsByName(keyword, userId);
+    }
 
+    @Override
+    public Document getDocumentById(Long userId, Long documentId) {
+        // 获取默认文档文件夹
+        QueryWrapper<Folder> folderQueryWrapper = new QueryWrapper<>();
+        folderQueryWrapper.eq("user_id", userId).eq("name", "默认文档");
+        Folder defaultFolder = folderMapper.selectOne(folderQueryWrapper);
+
+        // 检查该文档是否已经存在于默认文档文件夹中
+        QueryWrapper<DocumentFolder> documentFolderQueryWrapper = new QueryWrapper<>();
+        documentFolderQueryWrapper.eq("folder_id", defaultFolder.getId()).eq("document_id", documentId);
+        DocumentFolder existingDocumentFolder = documentFolderMapper.selectOne(documentFolderQueryWrapper);
+
+        // 如果文档不存在于默认文档文件夹中，则保存
+        if (existingDocumentFolder == null) {
+            DocumentFolder documentFolder = new DocumentFolder();
+            documentFolder.setFolderId(defaultFolder.getId());
+            documentFolder.setDocumentId(documentId);
+            documentFolderMapper.insert(documentFolder);
+        }
+
+        // 返回文档
+        return documentMapper.selectById(documentId);
+    }
+
+    @Override
+    public List<Folder> searchDocumentsByCreator(String keyword, Long userId) {
+        return folderMapper.searchFoldersByName(keyword, userId);
+    }
+
+    @Override
+    public void setDocumentAsTemplate(Long documentId,Long userId)  {
+        QueryWrapper<Document> documentQueryWrapper = new QueryWrapper<>();
+        documentQueryWrapper.eq("id", documentId);
+        Document document = documentMapper.selectOne(documentQueryWrapper);
+
+        TemplateDocument templateDocument = new TemplateDocument();
+        // 将文档设置为模板
+        BeanUtils.copyProperties(document,templateDocument);
+        templateDocument.setId(null);
+        templateDocument.setUserId(userId);
+        templateDocumentMapper.insert(templateDocument);
+
+}
+
+    @Override
+    public List<DocumentShareVO> getDocumentShare(Long userId) {
+        // 获取用户的所有最近文档
+        List<RecentDocuments> recentDocuments = recentDocumentsMapper.selectList(new QueryWrapper<RecentDocuments>().eq("user_id", userId));
+
+        if (recentDocuments.isEmpty()) {
+            return Collections.emptyList(); // 如果没有最近文档，则直接返回空列表
+        }
+
+        // 获取最近文档的documentId列表
+        List<Long> documentIds = recentDocuments.stream()
+                .map(RecentDocuments::getDocumentId)
+                .collect(Collectors.toList());
+
+        // 根据documentId获取文档信息
+        List<Document> documents = documentMapper.selectList(new QueryWrapper<Document>().in("id", documentIds));
+
+        // 使用Map分类文档
+        Map<Boolean, List<Document>> categorizedDocuments = documents.stream()
+                .collect(Collectors.partitioningBy(doc -> doc.getUserId().equals(userId)));
+
+        // 创建DocumentShareVO对象
+        DocumentShareVO sentDocumentShareVO = new DocumentShareVO();
+        sentDocumentShareVO.setDocuments(categorizedDocuments.getOrDefault(true, Collections.emptyList()));
+        sentDocumentShareVO.setCategory("我的分享");
+
+        DocumentShareVO receivedDocumentShareVO = new DocumentShareVO();
+        receivedDocumentShareVO.setDocuments(categorizedDocuments.getOrDefault(false, Collections.emptyList()));
+        receivedDocumentShareVO.setCategory("我的接收");
+
+        // 将两个对象添加到列表中并返回
+        List<DocumentShareVO> documentShareVOList = new ArrayList<>();
+        documentShareVOList.add(sentDocumentShareVO);
+        documentShareVOList.add(receivedDocumentShareVO);
+
+        return documentShareVOList;
+    }
+
+
+    @Override
+    public SearchVO searchDocumentsByContent(String keyword, Long userId) {
+        SearchVO searchVO = new SearchVO();
+        QueryWrapper<Document> documentQueryWrapper = new QueryWrapper<>();
+        documentQueryWrapper.like("content", keyword);
+        List<Document> documents = documentMapper.selectList(documentQueryWrapper);
+        searchVO.setDocuments(documents);
+        return searchVO;
+    }
+
+    @Override
+    public void deleteDocumentBatch(List<Long> documentIds) {
+
+        // 删除文档
+        documentMapper.deleteBatchIds(documentIds);
+    }
+
+    @Override
+    public void renameDocument(Long documentId, String newName,Long userId)  {
+        Document document = new Document();
+        document.setId(documentId);
+        document.setName(newName);
+
+        renameDocumentNameLog(documentId, newName, userId);
+
+        documentMapper.updateById(document);
+    }
+
+    @Override
+    public List<TemplateDocument> getTemplateDocument(Long userId) {
+        return templateDocumentMapper.selectList(new QueryWrapper<TemplateDocument>().eq("user_id", userId));
+    }
+
+    @Override
+    public List<TemplateDocument> getTemplateShow() {
+        QueryWrapper<TemplateDocument> queryWrapper = new QueryWrapper<>();
+        queryWrapper.last("LIMIT 10");
+        return templateDocumentMapper.selectList(queryWrapper);
+    }
+
+    @Override
+    public void editTemplate(TemplateDocumentUpdateDTO templateDocument) {
+        TemplateDocument templateDocument1 = new TemplateDocument();
+        BeanUtils.copyProperties(templateDocument, templateDocument1);
+        templateDocumentMapper.updateById(templateDocument1);
+    }
+
+    @Override
+    public void saveLog(Long documentId,DocumentUpdateDTO documentUpdateDTO) {
+        String name =  userDubboService.getUserNameByUserId(documentUpdateDTO.getUserId());
+        // 记录用户操作到文档操作表
+        DocumentOperation documentOperation = new DocumentOperation();
+        documentOperation.setDocumentId(documentId);
+        documentOperation.setUserId(documentUpdateDTO.getUserId());
+        documentOperation.setOperation("编辑");
+        documentOperation.setDescription("用户 " + name + " 更新了文档《 " + documentMapper.selectById(documentId).getName()+ "》");
+        documentOperation.setOperationTime(new Date());
+        documentOperationMapper.insert(documentOperation);
+    }
+
+    @Override
+    public void createLog(Long documentId,Long userId)  {
+        String name =  userDubboService.getUserNameByUserId(userId);
+        // 记录用户操作到文档操作表
+        DocumentOperation documentOperation = new DocumentOperation();
+        documentOperation.setDocumentId(documentId);
+        documentOperation.setUserId(userId);
+        documentOperation.setOperation("创建");
+        documentOperation.setDescription("用户 " + name + " 创建了文档《 " + documentMapper.selectById(documentId).getName()+ "》");
+        documentOperation.setOperationTime(new Date());
+        documentOperationMapper.insert(documentOperation);
+    }
+
+    public void renameDocumentNameLog(Long documentId, String newName,Long userId)  {
+        String name =  userDubboService.getUserNameByUserId(userId);
+        // 记录用户操作到文档操作表
+        DocumentOperation documentOperation = new DocumentOperation();
+
+        documentOperation.setDocumentId(documentId);
+
+        documentOperation.setUserId(userId);
+
+        documentOperation.setOperation("重命名");
+
+        documentOperation.setDescription("用户 " + name + "重新命名为:"+newName);
+        documentOperation.setOperationTime(new Date());
+        documentOperationMapper.insert(documentOperation);
+    }
 
 }
 

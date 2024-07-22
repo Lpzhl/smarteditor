@@ -5,6 +5,8 @@ import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.model.entity.Folder;
 import com.baomidou.mybatisplus.extension.service.IService;
 import hope.smarteditor.common.model.vo.UserFolderInfoVO;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
@@ -32,4 +34,11 @@ public interface FolderService extends IService<Folder> {
     List<UserFolderInfoVO> getFolderDocument(Long userId);
 
     boolean moveDocumentToFolder(MoveDocumentToFolderDTO moveDocumentToFolderDTO, Long userId);
+
+    List<Folder> searchFoldersByName(String keyword, Long userId);
+
+    List<Document> getDocumentByFolderId(Long folderId);
+
+    String deleteRecentDocument(Long documentId, Long userId);
+
 }

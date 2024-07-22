@@ -2,6 +2,7 @@ package hope.smarteditor.document.service;
 
 import hope.smarteditor.common.model.entity.RecentDocuments;
 import com.baomidou.mybatisplus.extension.service.IService;
+import hope.smarteditor.common.model.vo.DocumentInfoVO;
 import hope.smarteditor.common.model.vo.RecentDocumentsVO;
 import hope.smarteditor.common.result.Result;
 
@@ -16,5 +17,7 @@ public interface RecentDocumentsService extends IService<RecentDocuments> {
 
     void recordDocumentAccess(Long userId, Long documentId);
 
-    List<RecentDocumentsVO> getRecentDocuments(Long userId);
+/*    List<RecentDocumentsVO> getRecentDocuments(Long userId);*/
+
+    List<DocumentInfoVO> getRecentDocuments(Long userId);
 }
