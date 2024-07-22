@@ -2,6 +2,7 @@ package hope.smarteditor.user.controller;
 
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
+import hope.smarteditor.common.model.dto.PaperReviewRequestDTO;
 import hope.smarteditor.common.model.vo.BaiduResultVO;
 import hope.smarteditor.common.model.vo.OcrVO;
 import hope.smarteditor.common.result.Result;
@@ -11,10 +12,7 @@ import io.minio.errors.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -290,12 +288,9 @@ public class AiController {
      * 思维导图
      */
      @PostMapping("/mindMap")
-
- @ApiOperation("思维导图")
-
- @LzhLog
-
- public Result mindMap(@RequestParam("text") String text)   {
+     @ApiOperation("思维导图")
+     @LzhLog
+     public Result mindMap(@RequestParam("text") String text)   {
          String s = userService.mindMap(text);
         if (s == null) {
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
@@ -303,4 +298,36 @@ public class AiController {
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
 
      }
+
+    /**
+     * 论文评审
+     */
+    @PostMapping("/paperReview")
+    @ApiOperation("论文评审")
+    @LzhLog
+    public Result paperReview(@RequestBody PaperReviewRequestDTO request) {
+        String text = request.getText();
+
+        String s = userService.paperReview(text);
+        if (s == null) {
+            return Result.error(MessageConstant.NETWORK_ERROR, ErrorCode.NETWORK_ERROR.getCode());
+        }
+        return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
+    }
+
+
+    /**
+     * AI文档助手
+     */
+     @PostMapping("/aiDocumentAssistant")
+     @ApiOperation("AI文档助手")
+     @LzhLog
+     public Result aiDocumentAssistant(@RequestParam("problem") String text,@RequestParam("document") String documentUrl)   {
+         String s = userService.aiDocumentAssistant(text,documentUrl);
+        if (s == null) {
+            return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
+        }
+        return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
+     }
+
 }
