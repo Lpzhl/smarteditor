@@ -23,6 +23,6 @@
         id,user_id,name,
         content,summary,type,
         label,status,create_time,
-        update_time
+        update_time,subject,category
     </sql>
 </mapper>

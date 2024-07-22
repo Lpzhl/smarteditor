@@ -9,6 +9,7 @@
             <result property="userId" column="user_id" jdbcType="BIGINT"/>
             <result property="startDate" column="start_date" jdbcType="DATE"/>
             <result property="endDate" column="end_date" jdbcType="DATE"/>
+
     </resultMap>
 
     <sql id="Base_Column_List">
