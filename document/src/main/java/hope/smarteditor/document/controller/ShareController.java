@@ -85,7 +85,7 @@ public class ShareController {
     @ApiOperation("处理分享的文档")
     @LzhLog
     public Result handleShareDocument(@PathVariable String link,HttpServletRequest request)  {
-        Long userId = (Long) request.getSession().getAttribute("userId");
+        Long userId = Long.valueOf(request.getHeader("userId"));
         return Result.success(shareService.handleShareDocument(link,userId));
     }
 
