@@ -1,7 +1,10 @@
 
 package hope.smarteditor.gateway.filter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hope.smarteditor.api.UserDubboService;
+import hope.smarteditor.common.result.Result;
 import hope.smarteditor.gateway.config.RedisService;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,11 +67,11 @@ public class AuthFilter implements GlobalFilter, Ordered {
         String method = request.getMethod().toString();
 
 
-        log.info("请求方法：" + method);
+/*        log.info("请求方法：" + method);
         log.info("请求参数：" + request.getQueryParams());
         String sourceAddress = request.getLocalAddress().getHostString();
         log.info("请求来源地址：" + sourceAddress);
-        log.info("请求来源地址：" + request.getRemoteAddress());
+        log.info("请求来源地址：" + request.getRemoteAddress());*/
 
         // 获取请求路径
         String encodedPath = request.getPath().value();
@@ -82,9 +85,9 @@ public class AuthFilter implements GlobalFilter, Ordered {
             System.err.println("URL 解码失败: " + e.getMessage());
         }
 
-        // 检查请求路径是否在白名单中
+// 检查请求路径是否在白名单中或以特定前缀开头
         if (isWhiteListed(encodedPath)) {
-            // 如果是白名单中的路径，直接放行
+            // 如果是白名单中的路径或以指定前缀开头的路径，直接放行
             return chain.filter(exchange);
         }
 
@@ -160,12 +163,27 @@ public class AuthFilter implements GlobalFilter, Ordered {
     }
 
     // 创建错误响应体的方法
+// 创建错误响应体的方法，返回给前端
     private Mono<Void> onError(ServerHttpResponse response, HttpStatus status, String message) {
         response.setStatusCode(status);
-        byte[] bytes = message.getBytes(StandardCharsets.UTF_8);
-        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+        Result<String> errorResult = Result.error(message, status.value()); // 创建错误的 Result 对象
+        byte[] responseBytes = toJsonBytes(errorResult); // 转换为 JSON 字节数组
+
+        DataBuffer buffer = response.bufferFactory().wrap(responseBytes);
         return response.writeWith(Flux.just(buffer));
     }
+
+    // 将对象转换为 JSON 字节数组
+    private byte[] toJsonBytes(Object object) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsBytes(object);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return new byte[0];
+        }
+    }
+
 
     @Override
     public int getOrder() {
