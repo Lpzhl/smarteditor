@@ -14,6 +14,7 @@ import hope.smarteditor.common.model.entity.DocumentOperation;
 import hope.smarteditor.common.model.entity.TemplateDocument;
 import hope.smarteditor.common.model.vo.DocumentShareVO;
 import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
+import hope.smarteditor.common.model.vo.DocumentVersionVO;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.annotation.PermissionCheck;
@@ -56,6 +57,9 @@ public class DocumentMangeController {
 
     @Autowired
     private DocumentOperationService documentOperationService;
+
+    @Autowired
+    private DocumentVersionService documentVersionService;
 
 
     /**
@@ -283,6 +287,7 @@ public class DocumentMangeController {
      @LzhLog
      @PostMapping("/useTemplate/{Id}")
      public Result useTemplate(@PathVariable("Id")Long Id,HttpServletRequest request) {
+         // 先判断该用户是否为会员用户 会员用户免费使用 非会员用户需要查看用户模板使用的次数
          Long documentId = templateDocumentService.useTemplate(Id, Long.valueOf(request.getHeader("userId")));
          return Result.success(documentId);
      }
@@ -308,4 +313,27 @@ public class DocumentMangeController {
          QueryWrapper<TemplateDocument> templateDocumentQueryWrapper = new QueryWrapper<>();
          return Result.success(templateDocumentService.list(templateDocumentQueryWrapper));
      }
+
+    /**
+     * 获取文档版本记录
+     */
+     @ApiOperation("获取文档版本记录")
+     @LzhLog
+     @GetMapping("/getDocumentVersion/{documentId}")
+     public Result getDocumentVersion(@PathVariable("documentId")Long documentId)  {
+         List<DocumentVersionVO> documentVersions = documentVersionService.getDocumentVersion(documentId);
+         return Result.success(documentVersions);
+     }
+
+    /**
+     * 回退版本
+     */
+     @ApiOperation("回退版本")
+     @LzhLog
+     @PostMapping("/rollbackDocumentVersion/{documentId}/{Id}")
+     public Result rollbackDocumentVersion(@PathVariable("documentId")Long documentId,@PathVariable("Id")Long versionId,HttpServletRequest request) {
+         documentVersionService.rollbackDocumentVersion(documentId, versionId, Long.valueOf(request.getHeader("userId")));
+         return Result.success(MessageConstant.SUCCESSFUL);
+     }
+
 }

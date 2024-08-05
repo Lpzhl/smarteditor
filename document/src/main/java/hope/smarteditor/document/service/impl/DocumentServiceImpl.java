@@ -172,6 +172,16 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         documentpermissions.setPermissionId(1L); // 设置为创建者，权限为可编辑
         documentpermissionsMapper.insert(documentpermissions);
 
+        // 保存旧版本到文档版本表
+        DocumentVersion documentVersion = new DocumentVersion();
+        documentVersion.setDocumentId(document.getId());
+        documentVersion.setVersion(getNextVersionNumber(document.getId()));
+        documentVersion.setContent(document.getContent());
+        documentVersion.setSummary(document.getSummary());
+        documentVersion.setUsername(userDubboService.getUserNameByUserId(document.getUserId()));
+        documentVersion.setUpdateTime(new Date());
+        documentVersionMapper.insert(documentVersion);
+
         // 更新cacheKey1
         String cacheKey1 = "user:" + document.getUserId() + ":documents";
         List<Document> userDocuments = (List<Document>) redisTemplate.opsForValue().get(cacheKey1);
@@ -205,7 +215,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         if (document == null) {
             return null;
         }
-
+        String name = userDubboService.getUserNameByUserId(userId);
         // 保存旧版本到文档版本表
         DocumentVersion documentVersion = new DocumentVersion();
         documentVersion.setDocumentId(document.getId());
@@ -213,6 +223,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         documentVersion.setContent(document.getContent());
         documentVersion.setSummary(document.getSummary());
         documentVersion.setUpdateTime(new Date());
+
+        documentVersion.setUsername(name);
         documentVersionMapper.insert(documentVersion);
 
         // 更新文档对象中非空字段

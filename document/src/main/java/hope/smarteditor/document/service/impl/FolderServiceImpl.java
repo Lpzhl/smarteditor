@@ -97,6 +97,11 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
     @Override
     @HandleException
     public boolean deleteFolder(Long folderId) {
+        // 1.删除文件夹 不能删除默认文件夹
+        Folder folder = folderMapper.selectById(folderId);
+        if(folder.getName().equals("默认文件夹")){
+            throw new BusinessException(ErrorCode.FOLDER_ERROR);
+        }
         int i = folderMapper.deleteById(folderId);
         return i > 0;
     }
@@ -107,11 +112,9 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         // 1.更新文件夹名字
         Folder folder = new Folder();
 
-
-
         BeanUtils.copyProperties(folderDTO, folder);
         // 该用户不能创建名字为默认文件夹的文件夹
-        if(folder.getName().equals(MessageConstant.UPDATE_FAILED)){
+        if(folder.getName().equals("默认文件夹")){
             throw new BusinessException(ErrorCode.OPERATION_ERROR);
         }
 

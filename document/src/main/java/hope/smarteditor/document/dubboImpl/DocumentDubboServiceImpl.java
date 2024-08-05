@@ -16,12 +16,15 @@ import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +48,12 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
     private UserDocumentLikeMapper userDocumentLikeMapper;
     @Resource
     private FolderMapper folderMapper;
+
+    @Autowired
+    private DocumentpermissionsMapper documentpermissionsMapper;
+
+    @Autowired
+    private RecentDocumentsMapper recentDocumentMapper;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -279,14 +288,37 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
     }
 
     public void recordDocumentAccess(Long userId, Long documentId) {
-        String key = RECENT_DOCUMENTS_KEY_PREFIX + userId;
-        String value = String.valueOf(documentId);
-        long currentTime = System.currentTimeMillis();
+        RecentDocuments recentDocument = recentDocumentMapper.findByUserIdAndDocumentId(userId, documentId);
 
-        redisTemplate.opsForZSet().add(key, value, currentTime);
-
-        redisTemplate.opsForZSet().removeRange(key, 0, -51);
-
-        redisTemplate.expire(key, 1, TimeUnit.HOURS);
+        if (recentDocument != null) {
+            // 如果记录已存在，则更新访问时间
+            recentDocumentMapper.updateById(recentDocument);
+        } else {
+            // 如果记录不存在，则插入新记录
+            recentDocument = new RecentDocuments();
+            recentDocument.setUserId(userId);
+            recentDocument.setDocumentId(documentId);
+            recentDocumentMapper.insert(recentDocument);
+        }
     }
+
+    @Override
+    public void setPerssion(Long documentId, Long userId) {
+        Documentpermissions documentpermissions = new Documentpermissions();
+        // 如果存在则不需要
+        QueryWrapper<Documentpermissions> documentpermissionsQueryWrapper = new QueryWrapper<>();
+
+        documentpermissionsQueryWrapper.eq("document_id",documentId).eq("user_id",userId);
+
+        Documentpermissions documentpermissions1 = documentpermissionsMapper.selectOne(documentpermissionsQueryWrapper);
+
+        if(documentpermissions1 == null){
+            // 如果不存在则插入
+            documentpermissions.setUserId(userId);
+            documentpermissions.setDocumentId(documentId);
+            documentpermissions.setPermissionId(1L);
+            documentpermissionsMapper.insert(documentpermissions);
+        }
+    }
+
 }
