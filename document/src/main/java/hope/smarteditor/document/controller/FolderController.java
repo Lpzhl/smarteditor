@@ -53,11 +53,11 @@ public class FolderController {
      * @param folderId
      * @return
      */
-    @PostMapping("/deleteFolder/{folderId}")
+    @PostMapping("/deleteFolders/{folderId}")
     @LzhLog
     @ApiOperation("用户删除文件夹")
     public Result deleteFolder(@PathVariable Long folderId){
-        boolean b = folderService.deleteFolder(folderId);
+       boolean b = folderService.deleteFolder(folderId);
         if (b) {
             return Result.success(MessageConstant.DELETE_SUCCESSFUL);
         } else {

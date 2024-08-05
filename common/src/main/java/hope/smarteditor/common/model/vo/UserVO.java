@@ -38,6 +38,9 @@ public class UserVO implements Serializable {
     @ApiModelProperty("用户头像")
     private String avatar;
 
+    @ApiModelProperty("模板使用次数")
+    private Integer counts;
+
 
     @ApiModelProperty("会员购到期时间")
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")

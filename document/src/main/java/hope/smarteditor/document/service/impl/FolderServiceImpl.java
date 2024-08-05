@@ -160,6 +160,8 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
     @HandleException
     public boolean deleteDocument(Long documentId) {
         int i = documentFolderMapper.delete(new QueryWrapper<DocumentFolder>().eq("document_id", documentId));
+
+        // 新增操作日志
         return i > 0;
     }
 
@@ -250,6 +252,7 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
                 userFolderInfo.setUserId(userId);
                 userFolderInfo.setFolderName(folder.getName());
                 userFolderInfo.setPermissions(folder.getPermissions());
+                userFolderInfo.setDescription(folder.getDescription());
                 // 查询文件夹中的所有文档
                 List<DocumentFolder> documentFolders = documentFolderMapper.selectList(documentFolderQueryWrapper);
 
