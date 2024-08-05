@@ -16,5 +16,7 @@ public class UserFolderInfoVO implements Serializable {
 
     private String permissions;
 
+    private String description;
+
     private List<DocumentInfoVO> documents;
 }
