@@ -40,6 +40,8 @@ public class DocumentInfoVO implements Serializable {
 
     private Boolean isFavorite; //是否收藏
 
+    private String originalFolder; // 所在文件夹
+
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
 
