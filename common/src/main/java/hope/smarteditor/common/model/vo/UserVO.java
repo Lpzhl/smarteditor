@@ -35,8 +35,12 @@ public class UserVO implements Serializable {
 
     @ApiModelProperty("用户昵称")
     private String nickname;
+
     @ApiModelProperty("用户头像")
     private String avatar;
+
+    @ApiModelProperty("邀请码")
+    private String code;
 
     @ApiModelProperty("模板使用次数")
     private Integer counts;

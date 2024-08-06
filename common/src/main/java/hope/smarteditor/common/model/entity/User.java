@@ -30,6 +30,10 @@ public class User implements Serializable {
 
     private String avatar;
 
+    private String code;
+
+    private Integer counts;
+
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
