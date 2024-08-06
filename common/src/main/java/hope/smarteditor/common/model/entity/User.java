@@ -30,7 +30,7 @@ public class User implements Serializable {
 
     private String avatar;
 
-    private String code;
+    private String inviteCode;
 
     private Integer counts;
 

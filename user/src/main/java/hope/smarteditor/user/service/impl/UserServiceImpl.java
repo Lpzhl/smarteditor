@@ -6,10 +6,7 @@ import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import hope.smarteditor.api.DocumentDubboService;
 import hope.smarteditor.common.model.dto.UserLoginDTO;
 import hope.smarteditor.common.model.entity.User;
@@ -20,6 +17,7 @@ import hope.smarteditor.user.mapper.UserMapper;
 import io.minio.*;
 import io.minio.errors.*;
 import io.minio.http.Method;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,8 +33,10 @@ import java.security.NoSuchAlgorithmException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
+import static hope.smarteditor.common.constant.UserInfoConstant.*;
 
 
 /**
@@ -45,9 +45,10 @@ import java.util.UUID;
 * @createDate 2024-05-13 20:51:50
 */
 @Service
+@Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     implements UserService{
-    public  static final String BASE_URL = "https://f504iccf72ke3bha.aistudio-hub.baidu.com";
+   public  static final String BASE_URL = "https://f504iccf72ke3bha.aistudio-hub.baidu.com";
 
     @Autowired
     private UserMapper userMapper;
@@ -69,7 +70,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public boolean updateUser(User user) {
         UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.lambda().eq(User::getUsername, user.getUsername());
+        updateWrapper.lambda().eq(User::getId, user.getId());
+
         int i = userMapper.update(user, updateWrapper);
         return i > 0;
     }
@@ -77,24 +79,51 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public boolean register(User user) {
         // 先检查数据库中是否已经存在 username 如果存在则直接返回 false 否则进行注册
-        QueryWrapper queryWrapper = new QueryWrapper();
-        queryWrapper.eq("username", user.getUsername());
-        User user1 = userMapper.selectOne(queryWrapper);
-        if (user1!=null) {
+        boolean userExists = userMapper.selectOne(new QueryWrapper<User>().eq("username", user.getUsername())) != null;
+        if (userExists) {
             return false;
         }
+
+        // 检查是否填写了邀请码，并为拥有该邀请码的用户进行积分奖励
+        if (user.getInviteCode() != null && !user.getInviteCode().isEmpty()) {
+            User invitedUser = userMapper.selectOne(new QueryWrapper<User>().eq("invite_code", user.getInviteCode()));
+            if (invitedUser != null) {
+                // 为拥有该邀请码的用户增加积分奖励
+                invitedUser.setMoney(invitedUser.getMoney() + INVITE_CODE_MONEY);
+                userMapper.updateById(invitedUser);
+            }
+        }
+
         // 对密码进行加密
         String encryptedPassword = Md5Crypt(user.getPassword());
         user.setPassword(encryptedPassword);
-        user.setAvatar("https://cdn.jsdelivr.net/gh/xlc520/MyImage/img/20210501132958.png");
-        user.setNickname("新用户");
+        user.setAvatar(USER_AVATAR);
+        user.setNickname(USER_NICKNAME);
+
+        // 随机生成邀请码 6位 由大写字母和数字组成 并且要保证唯一
+        String inviteCode;
+        do {
+            inviteCode = generateInviteCode(6);
+        } while (userMapper.selectOne(new QueryWrapper<User>().eq("invite_code", inviteCode)) != null);
+        user.setInviteCode(inviteCode);
 
         // 进行注册
         int insert = userMapper.insert(user);
 
-        documentDubboService.createFolder("默认文件夹",user.getId());
+        documentDubboService.createFolder("默认文件夹", user.getId());
         return insert > 0;
     }
+
+    private String generateInviteCode(int length) {
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Random random = new Random();
+        StringBuilder inviteCode = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            inviteCode.append(characters.charAt(random.nextInt(characters.length())));
+        }
+        return inviteCode.toString();
+    }
+
 
     @Override
     public OcrVO ocr(MultipartFile file) throws NoSuchAlgorithmException, InvalidKeyException, IOException, MinioException {
@@ -138,11 +167,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         HttpResponse response = request.execute();
         String body = response.body();
 
+
         // 使用Gson解析JSON响应
-        JsonObject jsonObject = JsonParser.parseString(body).getAsJsonObject();
-        String message = jsonObject.get("message").getAsString();
-        String text = jsonObject.get("text").getAsString();
-        String imageBase64 = jsonObject.get("image_base64").getAsString();
+        JsonObject jsonObject;
+        String message;
+        String text;
+        String imageBase64;
+        try {
+            jsonObject = JsonParser.parseString(body).getAsJsonObject();
+            message = jsonObject.get("message").getAsString();
+            text = jsonObject.get("text").getAsString();
+            imageBase64 = jsonObject.get("image_base64").getAsString();
+        } catch (Exception e) {
+            log.error("JSON解析异常: " + e.getMessage(), e);
+
+            return null;
+            /*throw new RuntimeException("JSON解析异常: " + e.getMessage(), e);*/
+        }
 
         // 打印结果
         System.out.println("Message: " + message);
@@ -338,7 +379,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    public String ocrTable(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+    public OcrVO ocrTable(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
         // 1.首先把用户选择的图片上传到minio并且获取返回的url
         String objectName = UUID.randomUUID().toString() + "-" + file.getOriginalFilename();
         System.out.println("objectName = " + objectName);
@@ -384,15 +425,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String text = jsonObject.get("text").getAsString();
         String imageBase64 = jsonObject.get("image_base64").getAsString();
 
+        // 3.将提取的ocr图片再次上传到minio返回url给前端
+        // 将Base64编码的图片解码为字节数组
+        byte[] imageBytes = java.util.Base64.getDecoder().decode(imageBase64);
+        InputStream imageInputStream = new ByteArrayInputStream(imageBytes);
+        String ocrObjectName = UUID.randomUUID().toString() + "-ocr.png";
+        minioClient.putObject(
+                PutObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(ocrObjectName)
+                        .stream(imageInputStream, imageBytes.length, -1)
+                        .contentType("image/png")
+                        .build()
+        );
+        String ocrFullUrl = minioClient.getPresignedObjectUrl(
+                GetPresignedObjectUrlArgs.builder()
+                        .method(Method.GET)
+                        .bucket(bucketName)
+                        .object(ocrObjectName)
+                        .build()
+        );
+
         // 打印结果
         System.out.println("Message: " + message);
         System.out.println("Text: " + text);
 
-        return message;
+        OcrVO ocrVO = new OcrVO();
+        ocrVO.setOcrImage(ocrFullUrl);
+        ocrVO.setText(text);
+        ocrVO.setMessage(message);
+
+        return ocrVO;
     }
 
     @Override
-    public String asr(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+    public OcrVO asr(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
         // 1.首先把用户选择的图片上传到minio并且获取返回的url
         String objectName = UUID.randomUUID().toString() + "-" + file.getOriginalFilename();
         System.out.println("objectName = " + objectName);
@@ -425,7 +492,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 2.调用python 的ocr接口
         String url1 = BASE_URL +"/asr";
         HttpRequest request = HttpRequest.post(url1)
-                .form("image_path", baseUrl)  // 使用form方法设置form-data
+                .form("audio_url", baseUrl)  // 使用form方法设置form-data
                 .header("Content-Type", "multipart/form-data");  // 设置请求头为form-data类型
         HttpResponse response = request.execute();
         String body = response.body();
@@ -434,13 +501,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         JsonObject jsonObject = JsonParser.parseString(body).getAsJsonObject();
         String message = jsonObject.get("message").getAsString();
         String text = jsonObject.get("text").getAsString();
-        String imageBase64 = jsonObject.get("image_base64").getAsString();
 
         // 打印结果
         System.out.println("Message: " + message);
         System.out.println("Text: " + text);
 
-        return message;
+        OcrVO ocrVO = new OcrVO();
+        ocrVO.setText(text);
+        ocrVO.setMessage(message);
+        return ocrVO;
     }
 
     @Override
@@ -545,7 +614,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public String polish(String text,String requirement) {
 
-        String url = BASE_URL + "/polish";
+        String url = BASE_URL + "/textBeautification";
         try {
             HttpResponse response = HttpRequest.post(url)
                     .form("text", text)
@@ -594,6 +663,67 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         try {
             HttpResponse response = HttpRequest.post(url)
                     .form("text", text)
+                    .execute();
+            String body = response.body();
+            JsonObject jsonObject = JsonParser.parseString(body).getAsJsonObject();
+            String answer = jsonObject.get("answer").getAsString();
+            return answer;
+        }catch (Exception e) {
+            System.err.println("请求失败：" + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @Override
+    public User authenticate(String username, String password) {
+        return userMapper.authenticate(username, Md5Crypt(password));
+    }
+
+    @Override
+    public String mindMap(String text) {
+
+        String url = BASE_URL + "/mindMap";
+        try {
+            HttpResponse response = HttpRequest.post(url)
+                    .form("text", text)
+                    .execute();
+            String body = response.body();
+            JsonObject jsonObject = JsonParser.parseString(body).getAsJsonObject();
+            String answer = jsonObject.get("answer").getAsString();
+            return answer;
+        }catch (Exception e) {
+            System.err.println("请求失败：" + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @Override
+    public String paperReview(String text) {
+        String url = BASE_URL + "/paperReview";
+        try {
+            HttpResponse response = HttpRequest.post(url)
+                    .form("text", text)
+                    .execute();
+            String body = response.body();
+            JsonObject jsonObject = JsonParser.parseString(body).getAsJsonObject();
+            String answer = jsonObject.get("answer").getAsString();
+            return answer;
+        }catch (Exception e) {
+            System.err.println("请求失败：" + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @Override
+    public String aiDocumentAssistant(String text, String documentUrl) {
+        String url = BASE_URL + "/documentAi";
+        try {
+            HttpResponse response = HttpRequest.post(url)
+                    .form("problem", text)
+                    .form("document", documentUrl)
                     .execute();
             String body = response.body();
             JsonObject jsonObject = JsonParser.parseString(body).getAsJsonObject();

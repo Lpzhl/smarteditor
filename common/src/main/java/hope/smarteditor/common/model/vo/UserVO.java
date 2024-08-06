@@ -40,7 +40,7 @@ public class UserVO implements Serializable {
     private String avatar;
 
     @ApiModelProperty("邀请码")
-    private String code;
+    private String inviteCode;
 
     @ApiModelProperty("模板使用次数")
     private Integer counts;
