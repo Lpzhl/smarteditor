@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hope.smarteditor.document.mapper.DeletedInfoMapper">
+
+    <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.DeletedInfo">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="documentId" column="document_id" jdbcType="BIGINT"/>
+            <result property="originalFolderId" column="original_folder_id" jdbcType="BIGINT"/>
+            <result property="folderId" column="folder_id" jdbcType="BIGINT"/>
+            <result property="deletionTime" column="deletion_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,document_id,
+        original_folder_id,folder_id,deletion_time
+    </sql>
+</mapper>
