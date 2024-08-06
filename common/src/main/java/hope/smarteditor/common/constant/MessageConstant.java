@@ -41,5 +41,9 @@ public class MessageConstant {
     public static final String TEXT_CONTINUATION_SUCCESSFUL = "续写成功成功";
 
     public static final String NETWORK_ERROR = "网络错误";
+
+    public static final String RECOVER_SUCCESSFUL = "恢复成功";
+
+    public static final String DEF = "默认文件夹";
 }
 

@@ -15,7 +15,7 @@ public class UserInfoConstant {
 
     public static final int USER= 0;
 
-    public static final int INVITE_CODE_MONEY= 20;
+    public static final int INVITE_CODE_MONEY= 50;
 
     public static final String RECENT_DOCUMENTS_KEY_PREFIX = "recent_documents:";
 }
