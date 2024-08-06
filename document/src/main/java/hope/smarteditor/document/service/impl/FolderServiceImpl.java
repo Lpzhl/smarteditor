@@ -344,6 +344,28 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         return MessageConstant.SUCCESSFUL;
     }
 
+    @Override
+    public Boolean deleteDocumentByFolderId(DeleteDocumentByFolderIdDTO deleteDocumentByFolderIdDTO) {
+        // 获取文件夹ID和文档ID列表
+        Long folderId = deleteDocumentByFolderIdDTO.getFolderId();
+        List<Long> documentIds = deleteDocumentByFolderIdDTO.getDocumentIds();
+
+        // 检查文档ID列表是否为空
+        if (documentIds == null || documentIds.isEmpty()) {
+            return false;
+        }
+
+        // 删除文件夹中的文档
+        documentIds.forEach(documentId -> {
+            QueryWrapper<DocumentFolder> documentFolderQueryWrapper = new QueryWrapper<>();
+            documentFolderQueryWrapper.eq("folder_id", folderId).eq("document_id", documentId);
+            documentFolderMapper.delete(documentFolderQueryWrapper);
+        });
+
+        return true;
+    }
+
+
 }
 
 

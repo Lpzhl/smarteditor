@@ -186,5 +186,15 @@ public class FolderController {
      return Result.success(folderOperationLogService.getFolderLog(folderId), ErrorCode.SUCCESS.getCode(), MessageConstant.OPERATION_SUCCESSFUL);
      }
 
+    /**
+     * 批量删除文件夹中的文档信息
+     */
+     @PostMapping("/deleteDocumentByFolderId")
+     @LzhLog
+     @ApiOperation("批量删除文件夹中的文档信息")
+     public Result deleteDocumentByFolderId(@RequestBody DeleteDocumentByFolderIdDTO deleteDocumentByFolderIdDTO){
+         return Result.success(folderService.deleteDocumentByFolderId(deleteDocumentByFolderIdDTO), ErrorCode.SUCCESS.getCode(), MessageConstant.DELETE_SUCCESSFUL);
+     }
+
 
 }
