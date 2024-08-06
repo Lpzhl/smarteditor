@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.ComponentScan;
 
 
 /**
@@ -21,6 +22,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         HibernateJpaAutoConfiguration.class})
 @EnableConfigurationProperties(MybatisPlusProperties.class)
 @EnableDubbo
+@ComponentScan(basePackages = {"hope.smarteditor.common"})  //解决common包下类无法注入的问题 比如全局异常处理失效
 public class GatewayApplication {
 
     public static void main(String[] args) {

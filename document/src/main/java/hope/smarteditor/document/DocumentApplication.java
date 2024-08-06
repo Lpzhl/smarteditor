@@ -6,6 +6,7 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableCaching//开发缓存注解功能
 @EnableDubbo
 @EnableTransactionManagement
+@ComponentScan(basePackages = {"hope.smarteditor.common"})  //解决common包下类无法注入的问题 比如全局异常处理失效
 public class DocumentApplication {
     public static void main(String[] args) {
         SpringApplication.run(DocumentApplication.class, args);
