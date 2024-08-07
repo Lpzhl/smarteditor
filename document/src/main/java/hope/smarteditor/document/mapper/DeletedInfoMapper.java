@@ -2,6 +2,7 @@ package hope.smarteditor.document.mapper;
 
 import hope.smarteditor.common.model.entity.DeletedInfo;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Select;
 
 /**
 * @author LoveF
@@ -11,6 +12,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 */
 public interface DeletedInfoMapper extends BaseMapper<DeletedInfo> {
 
+    @Select("SELECT * FROM deleted_info WHERE document_id = #{documentId}")
+    DeletedInfo selectO(Long documentId);
 }
 
 

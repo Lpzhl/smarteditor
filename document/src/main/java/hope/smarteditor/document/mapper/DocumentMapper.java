@@ -5,6 +5,7 @@ import hope.smarteditor.common.model.entity.Document;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -22,6 +23,9 @@ public interface DocumentMapper extends BaseMapper<Document> {
     List<Document> searchDocumentsByName(@Param("keyword") String keyword, @Param("userId") Long userId);
     @Select("SELECT * FROM document WHERE user_id = #{userId} AND is_deleted = 1")
     List<Document> getDeletedDocuments(@Param("userId") Long userId);
+
+    @Update("UPDATE document SET is_deleted = 0 WHERE id = #{documentId} AND is_deleted = 1 ")
+    void recoverDocument(@Param("documentId") Long documentId);
 }
 
 

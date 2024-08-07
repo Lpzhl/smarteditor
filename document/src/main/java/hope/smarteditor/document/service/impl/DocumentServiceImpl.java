@@ -13,9 +13,7 @@ import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.dto.TemplateDocumentUpdateDTO;
 import hope.smarteditor.common.model.entity.*;
-import hope.smarteditor.common.model.vo.DocumentShareVO;
-import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
-import hope.smarteditor.common.model.vo.SearchVO;
+import hope.smarteditor.common.model.vo.*;
 import hope.smarteditor.document.mapper.*;
 import hope.smarteditor.document.service.DocumentService;
 import hope.smarteditor.document.service.FolderService;
@@ -38,6 +36,8 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static hope.smarteditor.common.constant.MessageConstant.DEF;
 
 /**
 * @author LoveF
@@ -80,6 +80,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
     @Autowired
     private DocumentFolderMapper documentFolderMapper;
 
+    @Resource
+    private FavoriteDocumentMapper favoriteDocumentMapper;
 
     @Autowired
     private TemplateDocumentMapper templateDocumentMapper;
@@ -88,8 +90,10 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
     private UserDubboService userDubboService;
 
     @Autowired
-    private RecentDocumentsMapper   recentDocumentsMapper;
+    private RecentDocumentsMapper recentDocumentsMapper;
 
+    @Resource
+    private FolderOperationLogMapper folderOperationLogMapper;
     @Override
     public String uploadFile(MultipartFile file) throws Exception{
         try {
@@ -196,6 +200,25 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         redisTemplate.opsForValue().set(cacheKey, savedDocument);
         // 设置缓存过期时间，例如1小时
         redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
+
+        // 搜索该用户的默认文件夹并且 添加到默认文件夹中
+        DocumentFolder documentFolder = new DocumentFolder();
+        documentFolder.setDocumentId(document.getId());
+        LambdaQueryWrapper<Folder> folderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        folderLambdaQueryWrapper.eq(Folder::getUserId, document.getUserId());
+        folderLambdaQueryWrapper.eq(Folder::getName, DEF);
+        Folder folder = folderMapper.selectOne(folderLambdaQueryWrapper);
+        documentFolder.setFolderId(folder.getId());
+        documentFolderMapper.insert(documentFolder);
+
+        // 添加日志
+        FolderOperationLog folderOperationLog = new FolderOperationLog();
+        folderOperationLog.setUserId(document.getUserId());
+        folderOperationLog.setFolderId(folder.getId());
+        folderOperationLog.setDocumentId(document.getId());
+        folderOperationLog.setOperation("插入");
+        folderOperationLog.setDocumentName(document.getName());
+        folderOperationLogMapper.insert(folderOperationLog);
 
         return savedDocument;
     }
@@ -314,6 +337,11 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         // 执行逻辑删除  并且设置删除时间
         int i = documentMapper.deleteById(documentId);
 
+        // 删除最近文档的记录
+        LambdaQueryWrapper<RecentDocuments> recentDocumentsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        recentDocumentsLambdaQueryWrapper.eq(RecentDocuments::getDocumentId, documentId);
+        recentDocumentsMapper.delete(recentDocumentsLambdaQueryWrapper);
+
         if (i > 0) {
             // 删除cacheKey1中的文档信息
             String cacheKey1 = "user:" + document.getUserId() + ":documents";
@@ -377,13 +405,12 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
      * @return
      */
     @Override
-    public List<Document> getDeletedDocuments(Long userId) {
-/*        QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("user_id", userId)
-                .eq("is_deleted", 1);
-       return documentMapper.selectList(queryWrapper.setEntity(null));*/
-
-        return documentMapper.getDeletedDocuments(userId);
+    public List<DocumentInfoVO> getDeletedDocuments(Long userId) {
+        List<Document> deletedDocuments = documentMapper.getDeletedDocuments(userId);
+        List<DocumentInfoVO> documentInfoVOS = deletedDocuments.stream()
+                .map(document -> convertToDocumentInfoVO(document, userId))
+                .collect(Collectors.toList());
+        return documentInfoVOS;
     }
 
 
@@ -481,7 +508,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 }
 
     @Override
-    public List<DocumentShareVO> getDocumentShare(Long userId) {
+    public List<DocumentShareInVO> getDocumentShare(Long userId) {
         // 获取用户的所有最近文档
         List<RecentDocuments> recentDocuments = recentDocumentsMapper.selectList(new QueryWrapper<RecentDocuments>().eq("user_id", userId));
 
@@ -501,24 +528,58 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         Map<Boolean, List<Document>> categorizedDocuments = documents.stream()
                 .collect(Collectors.partitioningBy(doc -> doc.getUserId().equals(userId)));
 
-        // 创建DocumentShareVO对象
-        DocumentShareVO sentDocumentShareVO = new DocumentShareVO();
-        sentDocumentShareVO.setDocuments(categorizedDocuments.getOrDefault(true, Collections.emptyList()));
-        sentDocumentShareVO.setCategory("我的分享");
+        // 创建DocumentShareInVO对象
+        DocumentShareInVO sentDocumentShareInVO = new DocumentShareInVO();
+        sentDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(true, Collections.emptyList()).stream()
+                .map(doc -> convertToDocumentInfoVO(doc, userId))
+                .collect(Collectors.toList()));
+        sentDocumentShareInVO.setCategory("我的分享");
 
-        DocumentShareVO receivedDocumentShareVO = new DocumentShareVO();
-        receivedDocumentShareVO.setDocuments(categorizedDocuments.getOrDefault(false, Collections.emptyList()));
-        receivedDocumentShareVO.setCategory("我的接收");
+        DocumentShareInVO receivedDocumentShareInVO = new DocumentShareInVO();
+        receivedDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(false, Collections.emptyList()).stream()
+                .map(doc -> convertToDocumentInfoVO(doc, userId))
+                .collect(Collectors.toList()));
+        receivedDocumentShareInVO.setCategory("我的接收");
 
         // 将两个对象添加到列表中并返回
-        List<DocumentShareVO> documentShareVOList = new ArrayList<>();
-        documentShareVOList.add(sentDocumentShareVO);
-        documentShareVOList.add(receivedDocumentShareVO);
+        List<DocumentShareInVO> documentShareInVOList = new ArrayList<>();
+        documentShareInVOList.add(sentDocumentShareInVO);
+        documentShareInVOList.add(receivedDocumentShareInVO);
 
-        return documentShareVOList;
+        return documentShareInVOList;
+    }
+
+    private DocumentInfoVO convertToDocumentInfoVO(Document document, Long userId) {
+        DocumentInfoVO documentInfoVO = new DocumentInfoVO();
+        BeanUtils.copyProperties(document, documentInfoVO);
+        User userInfo = userDubboService.getUserInfoByUserId(document.getUserId());
+        documentInfoVO.setCreateUserNickname(userInfo.getNickname());
+        boolean isFavorited = checkIfDocumentIsFavorited(String.valueOf(userId), document.getId());
+        documentInfoVO.setIsFavorite(isFavorited);
+        // 获取文档的所在文件夹 如果没有则为默认文件夹
+        LambdaQueryWrapper<DocumentFolder> documentFolderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        documentFolderLambdaQueryWrapper.eq(DocumentFolder::getDocumentId, document.getId());
+        DocumentFolder documentFolder = documentFolderMapper.selectOne(documentFolderLambdaQueryWrapper);
+        if (documentFolder != null) {
+            documentInfoVO.setOriginalFolder(folderMapper.selectById(documentFolder.getFolderId()).getName());
+        } else {
+            documentInfoVO.setOriginalFolder(DEF);
+        }
+
+        return documentInfoVO;
     }
 
 
+
+    private  boolean checkIfDocumentIsFavorited(String userId, Long documentId) {
+
+        QueryWrapper<FavoriteDocument> queryWrapper = new QueryWrapper<>();
+
+        queryWrapper.eq("user_id", userId).eq("document_id", documentId);
+
+        int count = favoriteDocumentMapper.selectCount(queryWrapper);
+        return count > 0;
+    }
     @Override
     public SearchVO searchDocumentsByContent(String keyword, Long userId) {
         SearchVO searchVO = new SearchVO();
@@ -590,6 +651,13 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         documentOperation.setDescription("用户 " + name + " 创建了文档《 " + documentMapper.selectById(documentId).getName()+ "》");
         documentOperation.setOperationTime(new Date());
         documentOperationMapper.insert(documentOperation);
+    }
+
+    @Override
+    public void restoreDeletedDocument(Long documentId) {
+        Document document = documentMapper.selectById(documentId);
+        document.setIsDeleted(0);
+        documentMapper.updateById(document);
     }
 
     public void renameDocumentNameLog(Long documentId, String newName,Long userId)  {

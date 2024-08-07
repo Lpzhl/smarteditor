@@ -1,23 +1,18 @@
 package hope.smarteditor.document.controller;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
-import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
-import hope.smarteditor.common.model.dto.DocumentUploadDTO;
-import hope.smarteditor.common.model.dto.DocumentPermissionsDTO;
-import hope.smarteditor.common.model.dto.TemplateDocumentUpdateDTO;
-import hope.smarteditor.common.model.entity.Document;
-import hope.smarteditor.common.model.entity.DocumentOperation;
-import hope.smarteditor.common.model.entity.TemplateDocument;
-import hope.smarteditor.common.model.vo.DocumentShareVO;
-import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
-import hope.smarteditor.common.model.vo.DocumentVersionVO;
+import hope.smarteditor.common.model.dto.*;
+import hope.smarteditor.common.model.entity.*;
+import hope.smarteditor.common.model.vo.*;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.annotation.PermissionCheck;
+import hope.smarteditor.document.mapper.FolderMapper;
 import hope.smarteditor.document.mapper.TemplateDocumentMapper;
 import hope.smarteditor.document.service.*;
 import io.swagger.annotations.Api;
@@ -27,9 +22,12 @@ import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.List;
+
+import static hope.smarteditor.common.constant.MessageConstant.DEF;
 
 /**
  * (document)表控制层
@@ -60,7 +58,6 @@ public class DocumentMangeController {
 
     @Autowired
     private DocumentVersionService documentVersionService;
-
 
     /**
      * 将在线富文本编写的文档信息上传到数据库中保存
@@ -167,10 +164,20 @@ public class DocumentMangeController {
     @GetMapping("/getDeletedDocuments/{userId}")
     @LzhLog
     @ApiOperation("获取用户已经删除的文档")
-    // todo 有问题获取不到
-    public Result<List<Document>> getDeletedDocuments(@PathVariable("userId") Long userId) {
-        List<Document> deletedDocuments = documentService.getDeletedDocuments(userId);
+    public Result getDeletedDocuments(@PathVariable("userId") Long userId) {
+        List<DocumentInfoVO> deletedDocuments = documentService.getDeletedDocuments(userId);
         return Result.success(deletedDocuments);
+    }
+
+    /**
+     * 将已经删除的文档复原
+     */
+    @PutMapping("/restoreDeletedDocument/{documentId}")
+    @LzhLog
+    @ApiOperation("将已经删除的文档复原")
+    public Result restoreDeletedDocument(@PathVariable("documentId") Long documentId) {
+        documentService.restoreDeletedDocument(documentId);
+        return Result.success(MessageConstant.SUCCESSFUL);
     }
 
     /**
@@ -239,7 +246,7 @@ public class DocumentMangeController {
     @LzhLog
     @GetMapping("/getShare/{userId}")
     public Result getShare(@PathVariable("userId") Long userId)  {
-        List<DocumentShareVO> documentShares = documentService.getDocumentShare(userId);
+        List<DocumentShareInVO> documentShares = documentService.getDocumentShare(userId);
         return Result.success(documentShares);
     }
 
@@ -289,6 +296,8 @@ public class DocumentMangeController {
      public Result useTemplate(@PathVariable("Id")Long Id,HttpServletRequest request) {
          // 先判断该用户是否为会员用户 会员用户免费使用 非会员用户需要查看用户模板使用的次数
          Long documentId = templateDocumentService.useTemplate(Id, Long.valueOf(request.getHeader("userId")));
+
+
          return Result.success(documentId);
      }
 

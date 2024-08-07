@@ -1,9 +1,13 @@
 package hope.smarteditor.document.dubboImpl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.api.DocumentDubboService;
 import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.constant.AuthorityConstant;
+import hope.smarteditor.common.constant.ErrorCode;
+import hope.smarteditor.common.constant.MessageConstant;
+import hope.smarteditor.common.exception.BusinessException;
 import hope.smarteditor.common.model.dto.FavoriteDocumentDTO;
 import hope.smarteditor.common.model.dto.FavoriteTemplateDTO;
 import hope.smarteditor.common.model.entity.*;
@@ -28,6 +32,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static hope.smarteditor.common.constant.MessageConstant.DEF;
+
 /**
  * author lzh
  */
@@ -48,6 +54,8 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
     private UserDocumentLikeMapper userDocumentLikeMapper;
     @Resource
     private FolderMapper folderMapper;
+    @Resource
+    private DocumentFolderMapper documentFolderMapper;
 
     @Autowired
     private DocumentpermissionsMapper documentpermissionsMapper;
@@ -55,7 +63,10 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
     @Autowired
     private RecentDocumentsMapper recentDocumentMapper;
 
-    @Autowired
+    @Resource
+    private FolderOperationLogMapper folderOperationLogMapper;
+
+    @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
     @DubboReference(version = "1.0.0", group = "user", check = false)
@@ -87,6 +98,15 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
                     BeanUtils.copyProperties(document, infoVO);
                     infoVO.setCreateUserNickname(nickname);
                     infoVO.setIsFavorite(isFavorited);
+                    // 获取文档的所在文件夹 如果没有则为默认文件夹
+                    DocumentFolder documentFolder = new DocumentFolder();
+                    documentFolder.setDocumentId(document.getId());
+                    LambdaQueryWrapper<DocumentFolder> documentFolderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+                    documentFolderLambdaQueryWrapper.eq(DocumentFolder::getDocumentId, document.getId());
+                    DocumentFolder documentFolder1 = documentFolderMapper.selectOne(documentFolderLambdaQueryWrapper);
+                    if (documentFolder1 != null) {
+                        infoVO.setOriginalFolder(folderMapper.selectById(documentFolder1.getFolderId()).getName());
+                    }else infoVO.setOriginalFolder(DEF);
                     documents.add(infoVO);
                 }
 /*                redisTemplate.opsForValue().set(cacheKey, documents);
@@ -279,11 +299,21 @@ public class DocumentDubboServiceImpl implements DocumentDubboService {
 
     @Override
     public boolean createFolder(String folderName, Long userId) {
+        // 1.创建文件夹
         Folder folder = new Folder();
-        folder.setPermissions(AuthorityConstant.VIEW);
-        folder.setUserId(userId);
         folder.setName(folderName);
+        folder.setUserId(userId);
+        folder.setPermissions(AuthorityConstant.VIEW);
+
         int insert = folderMapper.insert(folder);
+
+        // 2.创建操作日志
+        FolderOperationLog folderOperationLog = new FolderOperationLog();
+        folderOperationLog.setFolderId(folder.getId());
+        folderOperationLog.setOperation(MessageConstant.CREATE_FOLDER);
+        folderOperationLog.setUserId(userId);
+        folderOperationLogMapper.insert(folderOperationLog);
+
         return insert>0;
     }
 

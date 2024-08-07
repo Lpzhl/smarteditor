@@ -101,13 +101,13 @@ public class FolderController {
     /**
      * 在文件夹中删除文档
      */
-    @PostMapping("/deleteFolder/{documentId}")
+    @PostMapping("/deleteDocument/{folderId}/{documentId}")
     @LzhLog
     @ApiOperation("在文件夹中删除文档")
-    public Result deleteDocument(@PathVariable Long documentId){
-        return Result.success(folderService.deleteDocument(documentId), ErrorCode.SUCCESS.getCode(), MessageConstant.DELETE_SUCCESSFUL);
+    public Result deleteDocument(@PathVariable Long folderId, @PathVariable Long documentId,HttpServletRequest request) {
+        boolean isDeleted = folderService.deleteDocument(documentId, folderId, Long.valueOf(request.getHeader("userId")));
+        return Result.success(isDeleted, ErrorCode.SUCCESS.getCode(), MessageConstant.DELETE_SUCCESSFUL);
     }
-
     /**
      * 在各类文件夹中移动文档
      */
@@ -192,9 +192,18 @@ public class FolderController {
      @PostMapping("/deleteDocumentByFolderId")
      @LzhLog
      @ApiOperation("批量删除文件夹中的文档信息")
-     public Result deleteDocumentByFolderId(@RequestBody DeleteDocumentByFolderIdDTO deleteDocumentByFolderIdDTO){
-         return Result.success(folderService.deleteDocumentByFolderId(deleteDocumentByFolderIdDTO), ErrorCode.SUCCESS.getCode(), MessageConstant.DELETE_SUCCESSFUL);
+     public Result deleteDocumentByFolderId(@RequestBody DeleteDocumentByFolderIdDTO deleteDocumentByFolderIdDTO,HttpServletRequest request){
+         return Result.success(folderService.deleteDocumentByFolderId(deleteDocumentByFolderIdDTO, Long.valueOf(request.getHeader("userId"))), ErrorCode.SUCCESS.getCode(), MessageConstant.DELETE_SUCCESSFUL);
      }
 
+    /**
+     * 恢复删除的文档
+     */
+     @PostMapping("/recoverDocument")
+     @LzhLog
+     @ApiOperation("恢复删除的文档")
+     public Result recoverDocument(@RequestBody RecoverDocumentDTO recoverDocumentDTO,HttpServletRequest request){
+         return Result.success(folderService.recoverDocument(recoverDocumentDTO, Long.valueOf(request.getHeader("userId"))), ErrorCode.SUCCESS.getCode(), MessageConstant.RECOVER_SUCCESSFUL);
+     }
 
 }

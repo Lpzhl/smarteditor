@@ -3,6 +3,7 @@ package hope.smarteditor.document.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.constant.AuthorityConstant;
 import hope.smarteditor.common.constant.ErrorCode;
@@ -23,9 +24,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static hope.smarteditor.common.constant.MessageConstant.DEF;
 
 /**
 * @author LoveF
@@ -47,6 +52,11 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
 
     @Autowired
     private DocumentMapper documentMapper;
+    @Autowired
+    private RecentDocumentsMapper recentDocumentsMapper;
+
+    @DubboReference(version = "1.0.0", group = "user", check = false)
+    private UserDubboService userDubboService;
 
     @Autowired
     private RecentDocumentsService recentDocumentsService;
@@ -54,15 +64,14 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
     @Autowired
     private FavoriteDocumentMapper favoriteDocumentMapper;
 
-    @Autowired
-    private RecentDocumentsMapper recentDocumentsMapper;
-
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private ObjectMapper objectMapper;
 
-    @DubboReference(version = "1.0.0", group = "user", check = false)
-    private UserDubboService userDubboService;
+    @Resource
+    private DeletedInfoMapper deletedInfoMapper;
 
 
     @Override
@@ -158,10 +167,39 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
 
     @Override
     @HandleException
-    public boolean deleteDocument(Long documentId) {
-        int i = documentFolderMapper.delete(new QueryWrapper<DocumentFolder>().eq("document_id", documentId));
+    public boolean deleteDocument(Long documentId,Long folderId,Long userId)  {
+        int i = documentFolderMapper.delete(new QueryWrapper<DocumentFolder>().eq("document_id", documentId).eq("folder_id", folderId));
+
+        Document document = documentMapper.selectById(documentId);
+        if (document == null) {
+            return false;
+        }
+
+        // 执行逻辑删除  并且设置删除时间
+        documentMapper.deleteById(documentId);
+
+        // 删除最近文档的记录
+        LambdaQueryWrapper<RecentDocuments> recentDocumentsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        recentDocumentsLambdaQueryWrapper.eq(RecentDocuments::getDocumentId, documentId);
+        recentDocumentsMapper.delete(recentDocumentsLambdaQueryWrapper);
 
         // 新增操作日志
+        FolderOperationLog operationLog = new FolderOperationLog();
+        operationLog.setFolderId(folderId);
+        operationLog.setOperation("删除文档");
+        operationLog.setUserId(document.getUserId());
+        operationLog.setDocumentName(document.getName());
+        operationLog.setDocumentId(documentId);
+        folderOperationLogMapper.insert(operationLog);
+
+        //插入回收站
+        DeletedInfo deletedInfo = new DeletedInfo();
+        deletedInfo.setDocumentId(documentId);
+        deletedInfo.setUserId(userId);
+        deletedInfo.setOriginalFolderId(folderId);
+
+        deletedInfoMapper.insert(deletedInfo);
+
         return i > 0;
     }
 
@@ -219,7 +257,7 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         return true;
     }
 
-    private boolean checkIfDocumentIsFavorited(String userId, Long documentId) {
+    private  boolean checkIfDocumentIsFavorited(String userId, Long documentId) {
 
         QueryWrapper<FavoriteDocument> queryWrapper = new QueryWrapper<>();
 
@@ -228,6 +266,7 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         int count = favoriteDocumentMapper.selectCount(queryWrapper);
         return count > 0;
     }
+
     @Override
     public List<UserFolderInfoVO> getFolderDocument(Long userId) {
         try {
@@ -320,13 +359,37 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
     }
 
     @Override
-    public List<Document> getDocumentByFolderId(Long folderId) {
+    public List<DocumentInfoVO> getDocumentByFolderId(Long folderId) {
         // 构造查询条件
         LambdaQueryWrapper<Document> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.in(Document::getId, documentFolderMapper.getDocumentIdsByFolderId(folderId))
                 .orderByDesc(Document::getUpdateTime);
         // 执行查询
-        return documentMapper.selectList(queryWrapper);
+        List<Document> documents = documentMapper.selectList(queryWrapper);
+
+        // 转换 Document 为 DocumentInfoVO
+        List<DocumentInfoVO> documentInfoVOList = new ArrayList<>();
+        for (Document document : documents) {
+            DocumentInfoVO documentInfoVO = new DocumentInfoVO();
+            BeanUtils.copyProperties(document, documentInfoVO);
+
+            documentInfoVO.setCreateUserNickname(userDubboService.getUserNameByUserId(document.getUserId()));
+
+            documentInfoVO.setIsFavorite(checkIfDocumentIsFavorited(String.valueOf(document.getUserId()), document.getId()));
+            // 获取文档的所在文件夹 如果没有则为默认文件夹
+            DocumentFolder documentFolder = new DocumentFolder();
+            documentFolder.setDocumentId(document.getId());
+            LambdaQueryWrapper<DocumentFolder> documentFolderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+            documentFolderLambdaQueryWrapper.eq(DocumentFolder::getDocumentId, document.getId());
+            DocumentFolder documentFolder1 = documentFolderMapper.selectOne(documentFolderLambdaQueryWrapper);
+            if (documentFolder1 != null) {
+                documentInfoVO.setOriginalFolder(folderMapper.selectById(documentFolder1.getFolderId()).getName());
+            }else documentInfoVO.setOriginalFolder(DEF);
+
+            documentInfoVOList.add(documentInfoVO);
+        }
+
+        return documentInfoVOList;
     }
 
     @Override
@@ -345,7 +408,7 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
     }
 
     @Override
-    public Boolean deleteDocumentByFolderId(DeleteDocumentByFolderIdDTO deleteDocumentByFolderIdDTO) {
+    public Boolean deleteDocumentByFolderId(DeleteDocumentByFolderIdDTO deleteDocumentByFolderIdDTO,Long userId) {
         // 获取文件夹ID和文档ID列表
         Long folderId = deleteDocumentByFolderIdDTO.getFolderId();
         List<Long> documentIds = deleteDocumentByFolderIdDTO.getDocumentIds();
@@ -355,13 +418,83 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
             return false;
         }
 
-        // 删除文件夹中的文档
-        documentIds.forEach(documentId -> {
+        // 遍历文档ID列表并执行删除操作
+        for (Long documentId : documentIds) {
+            // 检查文档是否存在
+            Document document = documentMapper.selectById(documentId);
+            if (document == null) {
+                return false;
+            }
+
+            // 删除文件夹中的文档记录
             QueryWrapper<DocumentFolder> documentFolderQueryWrapper = new QueryWrapper<>();
             documentFolderQueryWrapper.eq("folder_id", folderId).eq("document_id", documentId);
             documentFolderMapper.delete(documentFolderQueryWrapper);
-        });
 
+            // 执行逻辑删除并设置删除时间
+            documentMapper.deleteById(documentId);
+
+            // 删除最近文档的记录
+            LambdaQueryWrapper<RecentDocuments> recentDocumentsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+            recentDocumentsLambdaQueryWrapper.eq(RecentDocuments::getDocumentId, documentId);
+            recentDocumentsMapper.delete(recentDocumentsLambdaQueryWrapper);
+
+            // 新增操作日志
+            FolderOperationLog operationLog = new FolderOperationLog();
+            operationLog.setFolderId(folderId);
+            operationLog.setOperation("删除文档");
+            operationLog.setUserId(document.getUserId());
+            operationLog.setDocumentId(documentId);
+            operationLog.setDocumentName(document.getName());
+            folderOperationLogMapper.insert(operationLog);
+
+            //插入回收站
+            DeletedInfo deletedInfo = new DeletedInfo();
+            deletedInfo.setDocumentId(documentId);
+            deletedInfo.setUserId(userId);
+            deletedInfo.setFolderId(folderId);
+            deletedInfoMapper.insert(deletedInfo);
+        }
+
+        return true;
+    }
+
+    @Override
+    public Boolean recoverDocument(RecoverDocumentDTO recoverDocumentDTO,Long userId) {
+        //  1.首先将文档从回收站中删除 并且逻辑删除改为0
+        Document document = new Document();
+        document.setId(recoverDocumentDTO.getDocumentId());
+        documentMapper.recoverDocument(document.getId());
+
+        //  2.从删除文档中找到该文档的原始文件夹id，将文档恢复到原来的文件夹  并且把删除记录删除
+        DeletedInfo deletedInfo = new DeletedInfo();
+        LambdaQueryWrapper<DeletedInfo> deletedInfoLambdaQueryWrapper = new LambdaQueryWrapper<>();
+
+        deletedInfoLambdaQueryWrapper.eq(DeletedInfo::getDocumentId, recoverDocumentDTO.getDocumentId());
+        DeletedInfo deletedInfo1 = deletedInfoMapper.selectO(recoverDocumentDTO.getDocumentId());
+        deletedInfoMapper.delete(deletedInfoLambdaQueryWrapper);
+        recoverDocumentDTO.setOriginalFolderId(deletedInfo1.getOriginalFolderId());
+
+
+        DocumentFolder documentFolder = new DocumentFolder();
+        documentFolder.setDocumentId(recoverDocumentDTO.getDocumentId());
+        documentFolder.setFolderId(recoverDocumentDTO.getOriginalFolderId());
+        documentFolderMapper.insert(documentFolder);
+        //  3.文件夹操作日志进行记录
+        FolderOperationLog operationLog = new FolderOperationLog();
+        operationLog.setFolderId(recoverDocumentDTO.getOriginalFolderId());
+        operationLog.setOperation("恢复文档");
+        operationLog.setUserId(userId);
+        operationLog.setDocumentId(recoverDocumentDTO.getDocumentId());
+        documentMapper.selectById(recoverDocumentDTO.getDocumentId()).getName();
+        operationLog.setDocumentName(document.getName());
+        folderOperationLogMapper.insert(operationLog);
+
+        //  4.更新最近文档
+        RecentDocuments recentDocuments = new RecentDocuments();
+        recentDocuments.setUserId(userId);
+        recentDocuments.setDocumentId(recoverDocumentDTO.getDocumentId());
+        recentDocumentsMapper.insert(recentDocuments);
         return true;
     }
 
