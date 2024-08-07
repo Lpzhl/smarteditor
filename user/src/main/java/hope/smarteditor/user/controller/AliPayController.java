@@ -3,6 +3,7 @@ package hope.smarteditor.user.controller;
 
 import com.alipay.easysdk.factory.Factory;
 import com.alipay.easysdk.payment.page.models.AlipayTradePagePayResponse;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.common.model.entity.Membership;
 import hope.smarteditor.common.model.entity.Orders;
 import hope.smarteditor.common.model.entity.PaymentOrder;
@@ -42,7 +43,7 @@ public class AliPayController {
     private OrdersService ordersService;
 
     @Autowired
-    private MembershipMapper  membershipMapper;
+    private MembershipMapper membershipMapper;
 
     @Autowired
     private UserMapper userMapper;
@@ -57,7 +58,7 @@ public class AliPayController {
         AlipayTradePagePayResponse response;
         try {
             // 设置return_url
-            String returnUrl = "http://localhost:8090/alipay/payment-success";
+            String returnUrl = "http://192.168.50.187:5173/#/person";
 
             // 获取编码后的订单 ID
             String orderTypePrefix = orderType.equals("points") ? "points_" : "membership_";
@@ -109,48 +110,53 @@ public class AliPayController {
                 ordersService.updateOrderStatus(Integer.parseInt(bookingId), "已支付");
                 // 处理支付成功的逻辑
                 if (type.equals("points")) {
-                    // 更新订单未已支付
+                    // 更新订单为已支付
                     Orders orders1 = ordersMapper.selectById(Integer.parseInt(bookingId));
                     User user = userMapper.selectById(orders1.getUserId());
                     user.setMoney(user.getMoney() + orders1.getNum());
                     userMapper.updateById(user);
-                }
-                    // 发送WebSocket消息
-                    //String message = "支付成功，订单号：" + bookingId;
-                    //myWebSocketHandler.sendMessage(message);
-              /*  // 发布支付成功消息到 Redis
-                stringRedisTemplate.convertAndSend("paymentSuccess", "支付成功，订单号：" + bookingId);*/
-                else if (type.equals("membership")) {
-                        Membership membership = new Membership();
-                        Orders orders = ordersService.getById(Integer.parseInt(bookingId));
-                        String description = orders.getDescription();
-                        User user = userMapper.selectById(orders.getUserId());
-                        user.setLevel(1);
-                        int months = orders.getNum(); // 会员月数，这里假设是天数，根据实际情况调整
+                } else if (type.equals("membership")) {
+                    Orders orders = ordersService.getById(Integer.parseInt(bookingId));
+                    String description = orders.getDescription();
+                    User user = userMapper.selectById(orders.getUserId());
+                    int months = orders.getNum(); // 会员月数，这里假设是月数，根据实际情况调整
 
+                    Membership membership = new Membership();
+                    QueryWrapper<Membership> membershipQueryWrapper = new QueryWrapper<>();
+                    membershipQueryWrapper.eq("user_id", user.getId())
+                            .orderByDesc("end_date")
+                            .last("LIMIT 1");
+                    membership = membershipMapper.selectOne(membershipQueryWrapper);
+                    if (membership != null) {
+                        // 如果该用户是会员，则更新会员时间累加
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.setTime(membership.getEndDate());
+                        calendar.add(Calendar.MONTH, months);
+                        membership.setEndDate(new Timestamp(calendar.getTimeInMillis()));
+                    } else {
+                        // 如果用户不是会员，则创建新的会员记录
+                        membership = new Membership();
+                        user.setLevel(1);  // 设置为会员
                         // 获取订单时间
-                         Date orderTimeUtil = orders.getOrderTime();
-                         Timestamp orderTime = new Timestamp(orderTimeUtil.getTime());
-
-                        // 使用 Calendar 类来进行日期操作
+                        Date orderTimeUtil = orders.getOrderTime();
+                        Timestamp orderTime = new Timestamp(orderTimeUtil.getTime());
                         Calendar calendar = Calendar.getInstance();
                         calendar.setTime(orderTime);
-                         calendar.add(Calendar.MONTH, months);
-
+                        calendar.add(Calendar.MONTH, months);
                         // 设置会员的起始日期和结束日期
                         membership.setStartDate(orderTime);
                         membership.setEndDate(new Timestamp(calendar.getTimeInMillis()));
                         membership.setUserId(user.getId());
-                        userMapper.updateById(user);
-                        // 插入会员记录
-                        membershipMapper.insert(membership);
                     }
-                    // 从Redis移除相关的过期时间数据
-                    stringRedisTemplate.opsForZSet().remove("orders", bookingId);
+                    userMapper.updateById(user);
+                    // 插入或更新会员记录
+                    membershipMapper.insert(membership);
                 }
+                // 从Redis移除相关的过期时间数据
+                stringRedisTemplate.opsForZSet().remove("orders", bookingId);
             }
-                 return "success";
         }
-
+        return "success";
     }
+}
 
