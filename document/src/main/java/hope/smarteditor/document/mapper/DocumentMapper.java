@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import javax.activation.DataSource;
 import java.util.List;
 
 /**
@@ -26,6 +27,10 @@ public interface DocumentMapper extends BaseMapper<Document> {
 
     @Update("UPDATE document SET is_deleted = 0 WHERE id = #{documentId} AND is_deleted = 1 ")
     void recoverDocument(@Param("documentId") Long documentId);
+
+    @Select("SELECT * FROM document WHERE id = #{documentId}")
+    Document selectDocument(@Param("documentId") Long documentId);
+
 }
 
 

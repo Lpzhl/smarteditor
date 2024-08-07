@@ -3,11 +3,13 @@ package hope.smarteditor.document.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import hope.smarteditor.common.model.entity.FolderOperationLog;
+import hope.smarteditor.document.mapper.DocumentMapper;
 import hope.smarteditor.document.service.FolderOperationLogService;
 import hope.smarteditor.document.mapper.FolderOperationLogMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.List;
 
 /**
@@ -21,13 +23,21 @@ public class FolderOperationLogServiceImpl extends ServiceImpl<FolderOperationLo
 
     @Autowired
     private FolderOperationLogMapper folderOperationLogMapper;
+    @Resource
+    private DocumentMapper documentMapper;
 
     @Override
     public List<FolderOperationLog> getFolderLog(Long folderId) {
         QueryWrapper<FolderOperationLog> folderOperationLogQueryWrapper = new QueryWrapper<>();
 
         folderOperationLogQueryWrapper.eq("folder_id",folderId);
-        return folderOperationLogMapper.selectList(folderOperationLogQueryWrapper);
+        List<FolderOperationLog> folderOperationLogs = folderOperationLogMapper.selectList(folderOperationLogQueryWrapper);
+        for (FolderOperationLog folderOperationLog : folderOperationLogs) {
+            if(folderOperationLog.getDocumentId()!=null){
+                folderOperationLog.setDocumentName(documentMapper.selectDocument(folderOperationLog.getDocumentId()).getName());
+            }
+        }
+        return folderOperationLogs;
     }
 }
 
