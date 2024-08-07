@@ -1,19 +1,15 @@
 package hope.smarteditor.document.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import hope.smarteditor.api.UserDubboService;
-import hope.smarteditor.common.model.entity.Document;
-import hope.smarteditor.common.model.entity.FavoriteDocument;
-import hope.smarteditor.common.model.entity.RecentDocuments;
-import hope.smarteditor.common.model.entity.User;
+import hope.smarteditor.common.model.dto.DocumentFolderDTO;
+import hope.smarteditor.common.model.entity.*;
 import hope.smarteditor.common.model.vo.DocumentInfoVO;
 import hope.smarteditor.common.model.vo.RecentDocumentsVO;
-import hope.smarteditor.document.mapper.DocumentMapper;
-import hope.smarteditor.document.mapper.FavoriteDocumentMapper;
-import hope.smarteditor.document.mapper.FavoriteTemplateMapper;
+import hope.smarteditor.document.mapper.*;
 import hope.smarteditor.document.service.RecentDocumentsService;
-import hope.smarteditor.document.mapper.RecentDocumentsMapper;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +17,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -28,6 +25,8 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static hope.smarteditor.common.constant.MessageConstant.DEF;
 
 /**
  * @author LoveF
@@ -48,6 +47,13 @@ public class RecentDocumentsServiceImpl extends ServiceImpl<RecentDocumentsMappe
 
     @Autowired
     private FavoriteDocumentMapper favoriteDocumentMapper;
+
+    @Resource
+    private DocumentFolderMapper documentFolderMapper;
+
+    @Resource
+    private FolderMapper  folderMapper;
+
 
     @DubboReference(version = "1.0.0", group = "user", check = false)
     private UserDubboService userDubboService;
@@ -170,6 +176,15 @@ public class RecentDocumentsServiceImpl extends ServiceImpl<RecentDocumentsMappe
                 boolean isFavorited = checkIfDocumentIsFavorited(String.valueOf(userId), document.getId());
                 documentInfoVO.setIsFavorite(isFavorited);
                 documentInfoVO.setUpdateTime(recentDocuments.getAccessTime());
+                // 获取文档的所在文件夹 如果没有则为默认文件夹
+                DocumentFolder documentFolder = new DocumentFolder();
+                documentFolder.setDocumentId(document.getId());
+                LambdaQueryWrapper<DocumentFolder> documentFolderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+                documentFolderLambdaQueryWrapper.eq(DocumentFolder::getDocumentId, document.getId());
+                DocumentFolder documentFolder1 = documentFolderMapper.selectOne(documentFolderLambdaQueryWrapper);
+                if (documentFolder1 != null) {
+                    documentInfoVO.setOriginalFolder(folderMapper.selectById(documentFolder1.getFolderId()).getName());
+                }else documentInfoVO.setOriginalFolder(DEF);
                 result.add(documentInfoVO);
             }
         }

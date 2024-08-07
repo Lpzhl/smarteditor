@@ -1,8 +1,12 @@
 package hope.smarteditor.document.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import hope.smarteditor.api.UserDubboService;
+import hope.smarteditor.common.constant.AuthorityConstant;
+import hope.smarteditor.common.constant.MessageConstant;
+import hope.smarteditor.common.model.dto.FolderDTO;
 import hope.smarteditor.common.model.entity.*;
 import hope.smarteditor.document.mapper.*;
 import hope.smarteditor.document.service.TemplateDocumentService;
@@ -13,7 +17,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.Date;
+
+import static hope.smarteditor.common.constant.MessageConstant.DEF;
 
 /**
 * @author LoveF
@@ -41,6 +48,16 @@ public class TemplateDocumentServiceImpl extends ServiceImpl<TemplateDocumentMap
 
     @Autowired
     private DocumentVersionMapper documentVersionMapper;
+
+    @Resource
+    private DocumentFolderMapper documentFolderMapper;
+
+    @Resource
+    private FolderMapper folderMapper;
+
+    @Resource
+    private FolderOperationLogMapper folderOperationLogMapper;
+
     @Override
     public void saveTemplate(Long id, Long userId) {
         TemplateDocument templateDocument = new TemplateDocument();
@@ -98,6 +115,31 @@ public class TemplateDocumentServiceImpl extends ServiceImpl<TemplateDocumentMap
         documentVersion.setUsername(userDubboService.getUserNameByUserId(userId));
         documentVersion.setUpdateTime(new Date());
         documentVersionMapper.insert(documentVersion);
+
+
+        // 将该文档保存到这个人的默认文档中
+        DocumentFolder documentFolder = new DocumentFolder();
+        LambdaQueryWrapper<Folder> folderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        folderLambdaQueryWrapper.eq(Folder::getUserId, userId).eq(Folder::getName, DEF);
+        Folder folder = folderMapper.selectOne(folderLambdaQueryWrapper);
+        if(folder == null){
+            folder.setName(DEF);
+            folder.setUserId(userId);
+            folder.setPermissions(AuthorityConstant.VIEW);
+            folderMapper.insert(folder);
+            // 2.创建操作日志
+            FolderOperationLog folderOperationLog = new FolderOperationLog();
+            folderOperationLog.setFolderId(folder.getId());
+            folderOperationLog.setOperation(MessageConstant.CREATE_FOLDER);
+            folderOperationLog.setUserId(userId);
+            folderOperationLogMapper.insert(folderOperationLog);
+
+        }
+
+        documentFolder.setFolderId(folder.getId());
+        documentFolder.setDocumentId(document.getId());
+        documentFolderMapper.insert(documentFolder);
+
 
         return document.getId();
     }
