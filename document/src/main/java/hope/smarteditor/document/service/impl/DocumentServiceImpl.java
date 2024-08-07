@@ -94,6 +94,10 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     @Resource
     private FolderOperationLogMapper folderOperationLogMapper;
+
+    @Resource
+    private DeletedInfoMapper deletedInfoMapper;
+
     @Override
     public String uploadFile(MultipartFile file) throws Exception{
         try {
@@ -413,7 +417,29 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         return documentInfoVOS;
     }
 
+    private DocumentInfoVO convertToDocumentInfoVO(Document document, Long userId) {
+        DocumentInfoVO documentInfoVO = new DocumentInfoVO();
+        BeanUtils.copyProperties(document, documentInfoVO);
+        LambdaQueryWrapper<DeletedInfo> deletedInfoLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        deletedInfoLambdaQueryWrapper.eq(DeletedInfo::getDocumentId, document.getId());
+        DeletedInfo deletedInfo = deletedInfoMapper.selectOne(deletedInfoLambdaQueryWrapper);
+        documentInfoVO.setUpdateTime(deletedInfo.getDeletionTime());
+        User userInfo = userDubboService.getUserInfoByUserId(document.getUserId());
+        documentInfoVO.setCreateUserNickname(userInfo.getNickname());
+        boolean isFavorited = checkIfDocumentIsFavorited(String.valueOf(userId), document.getId());
+        documentInfoVO.setIsFavorite(isFavorited);
+        // 获取文档的所在文件夹 如果没有则为默认文件夹
+        LambdaQueryWrapper<DocumentFolder> documentFolderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        documentFolderLambdaQueryWrapper.eq(DocumentFolder::getDocumentId, document.getId());
+        DocumentFolder documentFolder = documentFolderMapper.selectOne(documentFolderLambdaQueryWrapper);
+        if (documentFolder != null) {
+            documentInfoVO.setOriginalFolder(folderMapper.selectById(documentFolder.getFolderId()).getName());
+        } else {
+            documentInfoVO.setOriginalFolder(DEF);
+        }
 
+        return documentInfoVO;
+    }
     @Override
     public List<DocumentUserPermisssVO> getParticipants(Long documentId) {
         // 查询文档对象
@@ -492,20 +518,21 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         return folderMapper.searchFoldersByName(keyword, userId);
     }
 
-    @Override
-    public void setDocumentAsTemplate(Long documentId,Long userId)  {
-        QueryWrapper<Document> documentQueryWrapper = new QueryWrapper<>();
-        documentQueryWrapper.eq("id", documentId);
-        Document document = documentMapper.selectOne(documentQueryWrapper);
+        @Override
+        public void setDocumentAsTemplate(Long documentId,Long userId)  {
+            QueryWrapper<Document> documentQueryWrapper = new QueryWrapper<>();
+            documentQueryWrapper.eq("id", documentId);
+            Document document = documentMapper.selectOne(documentQueryWrapper);
 
-        TemplateDocument templateDocument = new TemplateDocument();
-        // 将文档设置为模板
-        BeanUtils.copyProperties(document,templateDocument);
-        templateDocument.setId(null);
-        templateDocument.setUserId(userId);
-        templateDocumentMapper.insert(templateDocument);
+            TemplateDocument templateDocument = new TemplateDocument();
+            // 将文档设置为模板
+            BeanUtils.copyProperties(document,templateDocument);
+            templateDocument.setId(null);
+            templateDocument.setUserId(userId);
+            templateDocumentMapper.insert(templateDocument);
 
-}
+    }
+
 
     @Override
     public List<DocumentShareInVO> getDocumentShare(Long userId) {
@@ -549,25 +576,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         return documentShareInVOList;
     }
 
-    private DocumentInfoVO convertToDocumentInfoVO(Document document, Long userId) {
-        DocumentInfoVO documentInfoVO = new DocumentInfoVO();
-        BeanUtils.copyProperties(document, documentInfoVO);
-        User userInfo = userDubboService.getUserInfoByUserId(document.getUserId());
-        documentInfoVO.setCreateUserNickname(userInfo.getNickname());
-        boolean isFavorited = checkIfDocumentIsFavorited(String.valueOf(userId), document.getId());
-        documentInfoVO.setIsFavorite(isFavorited);
-        // 获取文档的所在文件夹 如果没有则为默认文件夹
-        LambdaQueryWrapper<DocumentFolder> documentFolderLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        documentFolderLambdaQueryWrapper.eq(DocumentFolder::getDocumentId, document.getId());
-        DocumentFolder documentFolder = documentFolderMapper.selectOne(documentFolderLambdaQueryWrapper);
-        if (documentFolder != null) {
-            documentInfoVO.setOriginalFolder(folderMapper.selectById(documentFolder.getFolderId()).getName());
-        } else {
-            documentInfoVO.setOriginalFolder(DEF);
-        }
 
-        return documentInfoVO;
-    }
 
 
 

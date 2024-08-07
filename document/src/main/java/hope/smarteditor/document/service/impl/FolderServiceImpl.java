@@ -121,16 +121,18 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         // 1.更新文件夹名字
         Folder folder = new Folder();
 
+        Folder folder1 = folderMapper.selectById(folderDTO.getId());
         BeanUtils.copyProperties(folderDTO, folder);
         // 该用户不能创建名字为默认文件夹的文件夹
         if(folder.getName().equals("默认文件夹")){
-            throw new BusinessException(ErrorCode.OPERATION_ERROR);
+            throw new BusinessException(ErrorCode.FOLDER_ERROR);
+        }if(folder1.getName().equals("默认文件夹")){
+            throw new BusinessException(ErrorCode.FOLDER_ERROR);
         }
-
         // 2.创建操作日志
         FolderOperationLog folderOperationLog = new FolderOperationLog();
         folderOperationLog.setFolderId(folderDTO.getId());
-        folderOperationLog.setOperation(MessageConstant.UPDATE_FOLDER);
+        folderOperationLog.setOperation(MessageConstant.UPDATE_FOLDER +"---新名字："+ folderDTO.getName());
         folderOperationLog.setUserId(userId);
         folderOperationLogMapper.insert(folderOperationLog);
         return folderMapper.updateById(folder) > 0;
@@ -186,7 +188,7 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         // 新增操作日志
         FolderOperationLog operationLog = new FolderOperationLog();
         operationLog.setFolderId(folderId);
-        operationLog.setOperation("删除文档");
+        operationLog.setOperation("删除");
         operationLog.setUserId(document.getUserId());
         operationLog.setDocumentName(document.getName());
         operationLog.setDocumentId(documentId);
@@ -442,7 +444,7 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
             // 新增操作日志
             FolderOperationLog operationLog = new FolderOperationLog();
             operationLog.setFolderId(folderId);
-            operationLog.setOperation("删除文档");
+            operationLog.setOperation("删除");
             operationLog.setUserId(document.getUserId());
             operationLog.setDocumentId(documentId);
             operationLog.setDocumentName(document.getName());
@@ -483,8 +485,9 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
         //  3.文件夹操作日志进行记录
         FolderOperationLog operationLog = new FolderOperationLog();
         operationLog.setFolderId(recoverDocumentDTO.getOriginalFolderId());
-        operationLog.setOperation("恢复文档");
+        operationLog.setOperation("恢复");
         operationLog.setUserId(userId);
+        operationLog.setDocumentName(document.getName());
         operationLog.setDocumentId(recoverDocumentDTO.getDocumentId());
         documentMapper.selectById(recoverDocumentDTO.getDocumentId()).getName();
         operationLog.setDocumentName(document.getName());
