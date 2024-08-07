@@ -11,7 +11,9 @@ import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.JwtClaimsConstant;
 import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.common.constant.StatusConstant;
+import hope.smarteditor.common.exception.BusinessException;
 import hope.smarteditor.common.model.dto.CollaborationDTO;
+import hope.smarteditor.common.model.dto.RegisterDTO;
 import hope.smarteditor.common.model.dto.UserLoginDTO;
 import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.model.entity.Membership;
@@ -89,6 +91,10 @@ public class UserController {
            User user = userService.getById(collaborationDTO.getUserId());
             Document document = documentDubboService.getDocumentById(collaborationDTO.getDocumentId());
             documentDubboService.recordDocumentAccess(collaborationDTO.getUserId(), collaborationDTO.getDocumentId());
+
+            // 授予可以编辑保存的权限
+            documentDubboService.setPerssion(collaborationDTO.getDocumentId(), collaborationDTO.getUserId());
+
             user.setPassword("******");
              CollaborationVO collaborationVO = new CollaborationVO();
              collaborationVO.setUser(user);
@@ -111,6 +117,10 @@ public class UserController {
             return Result.error(ErrorCode.PASSWORD_ERROR.getMessage());
         }
 
+/*        if(user == null){
+            throw new BusinessException(ErrorCode.PASSWORD_ERROR);
+        }*/
+
         // 用户生成jwt令牌
         Map<String, Object> claims = new HashMap<>();
         claims.put(JwtClaimsConstant.USER_ID, user.getId());
@@ -132,6 +142,18 @@ public class UserController {
                 .token(token)
                 .build();
         return Result.success(userLoginVO);
+    }
+
+    /**
+     * 退出登录
+     */
+    @ApiOperation("退出登录")
+    @PostMapping("/logout")
+    @LzhLog
+    public Result logout(HttpServletRequest request){
+        Long userId = Long.valueOf(request.getHeader("userId"));
+        redisService.deleteLike(userId.toString());
+        return Result.success();
     }
 
     /**
@@ -182,7 +204,8 @@ public class UserController {
 
         Membership membership = new Membership();
         QueryWrapper<Membership> membershipQueryWrapper = new QueryWrapper<>();
-        membershipQueryWrapper.eq("user_id", userid);
+        membershipQueryWrapper.eq("user_id", userid).orderByDesc("end_date")
+                .last("LIMIT 1");;
         membership = membershipMapper.selectOne(membershipQueryWrapper);
 
         if (membership != null) {
@@ -205,8 +228,8 @@ public class UserController {
     @PostMapping("/register")
     @ApiOperation("用户注册")
     @LzhLog
-    public Result<Boolean> register(@RequestBody User user) {
-        if(userService.register(user)){
+    public Result<Boolean> register(@RequestBody RegisterDTO registerDTO) {
+        if(userService.register(registerDTO)){
             return  Result.success(MessageConstant.ACCOUNT_SUCCESSFUL);
         }else {
             return Result.error(MessageConstant.ALREADY_EXISTS);
