@@ -22,10 +22,10 @@ import org.springframework.web.bind.annotation.*;
 
 
 import javax.servlet.http.HttpServletRequest;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,7 +57,7 @@ public class AliPayController {
         AlipayTradePagePayResponse response;
         try {
             // 设置return_url
-            String returnUrl = "http://8qeqvk.natappfree.cc/alipay/payment-success";
+            String returnUrl = "http://localhost:8090/alipay/payment-success";
 
             // 获取编码后的订单 ID
             String orderTypePrefix = orderType.equals("points") ? "points_" : "membership_";
@@ -106,7 +106,7 @@ public class AliPayController {
                 System.out.println("买家在支付宝唯一id: " + params.get("buyer_id"));
                 System.out.println("买家付款时间: " + params.get("gmt_payment"));
                 System.out.println("买家付款金额: " + params.get("buyer_pay_amount"));
-                ordersService.updateOrderStatus(Integer.parseInt(bookingId), "已完成");
+                ordersService.updateOrderStatus(Integer.parseInt(bookingId), "已支付");
                 // 处理支付成功的逻辑
                 if (type.equals("points")) {
                     // 更新订单未已支付
@@ -114,31 +114,34 @@ public class AliPayController {
                     User user = userMapper.selectById(orders1.getUserId());
                     user.setMoney(user.getMoney() + orders1.getNum());
                     userMapper.updateById(user);
-
+                }
                     // 发送WebSocket消息
                     //String message = "支付成功，订单号：" + bookingId;
                     //myWebSocketHandler.sendMessage(message);
               /*  // 发布支付成功消息到 Redis
                 stringRedisTemplate.convertAndSend("paymentSuccess", "支付成功，订单号：" + bookingId);*/
-                    if (type.equals("membership")) {
+                else if (type.equals("membership")) {
                         Membership membership = new Membership();
                         Orders orders = ordersService.getById(Integer.parseInt(bookingId));
                         String description = orders.getDescription();
-
-                        int days = orders.getNum(); // 会员月数，这里假设是天数，根据实际情况调整
+                        User user = userMapper.selectById(orders.getUserId());
+                        user.setLevel(1);
+                        int months = orders.getNum(); // 会员月数，这里假设是天数，根据实际情况调整
 
                         // 获取订单时间
-                        Timestamp orderTime = (Timestamp) orders.getOrderTime();
+                         Date orderTimeUtil = orders.getOrderTime();
+                         Timestamp orderTime = new Timestamp(orderTimeUtil.getTime());
 
                         // 使用 Calendar 类来进行日期操作
                         Calendar calendar = Calendar.getInstance();
                         calendar.setTime(orderTime);
-                        calendar.add(Calendar.DAY_OF_MONTH, days); // 增加天数
+                         calendar.add(Calendar.MONTH, months);
 
                         // 设置会员的起始日期和结束日期
                         membership.setStartDate(orderTime);
                         membership.setEndDate(new Timestamp(calendar.getTimeInMillis()));
-
+                        membership.setUserId(user.getId());
+                        userMapper.updateById(user);
                         // 插入会员记录
                         membershipMapper.insert(membership);
                     }
@@ -146,9 +149,8 @@ public class AliPayController {
                     stringRedisTemplate.opsForZSet().remove("orders", bookingId);
                 }
             }
-
+                 return "success";
         }
-        return "success";
+
     }
 
-}
