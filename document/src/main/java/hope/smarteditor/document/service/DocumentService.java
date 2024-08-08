@@ -6,9 +6,7 @@ import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.dto.TemplateDocumentUpdateDTO;
 import hope.smarteditor.common.model.entity.*;
-import hope.smarteditor.common.model.vo.DocumentShareVO;
-import hope.smarteditor.common.model.vo.DocumentUserPermisssVO;
-import hope.smarteditor.common.model.vo.SearchVO;
+import hope.smarteditor.common.model.vo.*;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,7 +33,7 @@ public interface DocumentService extends IService<Document> {
 
     void setDocumentVisibility(Long documentId);
 
-    List<Document> getDeletedDocuments(Long userId);
+    List<DocumentInfoVO> getDeletedDocuments(Long userId);
 
 
     List<DocumentUserPermisssVO> getParticipants(Long documentId);
@@ -48,7 +46,7 @@ public interface DocumentService extends IService<Document> {
 
     void setDocumentAsTemplate(Long documentId,Long userId);
 
-    List<DocumentShareVO> getDocumentShare(Long userId);
+    List<DocumentShareInVO> getDocumentShare(Long userId);
 
     SearchVO searchDocumentsByContent(String keyword, Long userId);
 
@@ -65,4 +63,5 @@ public interface DocumentService extends IService<Document> {
     void saveLog(Long documentId,DocumentUpdateDTO documentUpdateDTO);
     void createLog(Long documentId,Long userId);
 
+    void restoreDeletedDocument(Long documentId);
 }
