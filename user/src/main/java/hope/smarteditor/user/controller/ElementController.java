@@ -1,6 +1,7 @@
 package hope.smarteditor.user.controller;
 
 
+import com.alibaba.druid.sql.visitor.SQLASTOutputVisitor;
 import hope.smarteditor.common.model.dto.ElementDTO;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.user.annotation.LzhLog;
@@ -34,7 +35,7 @@ public class ElementController {
     /**
      * 根据素材Id删除素材
      */
-    @GetMapping("delete/{id}")
+    @DeleteMapping("delete/{id}")
     @LzhLog
     @ApiOperation(value = "根据素材Id删除素材")
     public Result deleteElement(@PathVariable("id") String id){
@@ -57,7 +58,10 @@ public class ElementController {
     @PostMapping("/upload")
     @LzhLog
     @ApiOperation(value = "用户上传素材")
-    public Result uploadElement(@RequestBody ElementDTO elementDTO){
+    public Result uploadElement(@RequestBody ElementDTO elementDTO,HttpServletRequest request){
+
+        Long userId = Long.valueOf(request.getHeader("userId"));
+        elementDTO.setUserId(userId);
         return Result.success(elementService.uploadElement(elementDTO));
     }
 
@@ -75,11 +79,12 @@ public class ElementController {
     /**
      * 将素材添加为自己的素材
      */
-    @PostMapping("add/{id}")
+     @GetMapping("add/{id}")
      @LzhLog
      @ApiOperation(value = "将素材添加为自己的素材")
      public Result addElement(@PathVariable ("id") Long id, HttpServletRequest request){
-         Long userId = (Long) request.getSession().getAttribute("userId");
+         System.out.println("id = " + id);
+         Long userId = Long.valueOf(request.getHeader("userId"));
          return Result.success(elementService.addElement(id,userId));
      }
 
