@@ -42,7 +42,7 @@ public class DocumentVersionServiceImpl extends ServiceImpl<DocumentVersionMappe
     @Override
     public List<DocumentVersionVO> getDocumentVersion(Long documentId) {
         QueryWrapper<DocumentVersion> documentVersionQueryWrapper = new QueryWrapper<>();
-        documentVersionQueryWrapper.eq("document_id", documentId);
+        documentVersionQueryWrapper.eq("document_id", documentId).orderByDesc("version");
         List<DocumentVersion> documentVersions = documentVersionMapper.selectList(documentVersionQueryWrapper);
 
         List<DocumentVersionVO> documentVersionVOs = documentVersions.stream()
