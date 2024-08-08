@@ -3,11 +3,13 @@ package hope.smarteditor.user.service.impl;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.*;
 import hope.smarteditor.api.DocumentDubboService;
+import hope.smarteditor.common.model.dto.RegisterDTO;
 import hope.smarteditor.common.model.dto.UserLoginDTO;
 import hope.smarteditor.common.model.entity.User;
 import hope.smarteditor.common.model.vo.BaiduResultVO;
@@ -36,6 +38,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
+import static hope.smarteditor.common.constant.MessageConstant.DEF;
 import static hope.smarteditor.common.constant.UserInfoConstant.*;
 
 
@@ -77,16 +80,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    public boolean register(User user) {
+    public boolean register(RegisterDTO registerDTO) {
         // 先检查数据库中是否已经存在 username 如果存在则直接返回 false 否则进行注册
-        boolean userExists = userMapper.selectOne(new QueryWrapper<User>().eq("username", user.getUsername())) != null;
+        boolean userExists = userMapper.selectOne(new QueryWrapper<User>().eq("username", registerDTO.getUsername())) != null;
         if (userExists) {
             return false;
         }
 
+
         // 检查是否填写了邀请码，并为拥有该邀请码的用户进行积分奖励
-        if (user.getInviteCode() != null && !user.getInviteCode().isEmpty()) {
-            User invitedUser = userMapper.selectOne(new QueryWrapper<User>().eq("invite_code", user.getInviteCode()));
+        if (registerDTO.getInviteCode() != null && !registerDTO.getInviteCode().isEmpty()) {
+            User invitedUser = userMapper.findByInviteCode(registerDTO.getInviteCode());
             if (invitedUser != null) {
                 // 为拥有该邀请码的用户增加积分奖励
                 invitedUser.setMoney(invitedUser.getMoney() + INVITE_CODE_MONEY);
@@ -94,11 +98,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             }
         }
 
+        User user = new User();
+
         // 对密码进行加密
-        String encryptedPassword = Md5Crypt(user.getPassword());
+        String encryptedPassword = Md5Crypt(registerDTO.getPassword());
         user.setPassword(encryptedPassword);
         user.setAvatar(USER_AVATAR);
         user.setNickname(USER_NICKNAME);
+        user.setUsername(registerDTO.getUsername());
 
         // 随机生成邀请码 6位 由大写字母和数字组成 并且要保证唯一
         String inviteCode;
@@ -110,7 +117,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 进行注册
         int insert = userMapper.insert(user);
 
-        documentDubboService.createFolder("默认文件夹", user.getId());
+        documentDubboService.createFolder(DEF, user.getId());
         return insert > 0;
     }
 
