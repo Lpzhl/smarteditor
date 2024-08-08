@@ -3,6 +3,7 @@ package hope.smarteditor.document.mapper;
 import hope.smarteditor.common.model.entity.Documentpermissions;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 /**
 * @author LoveF
@@ -12,7 +13,8 @@ import org.apache.ibatis.annotations.Mapper;
 */
 @Mapper
 public interface DocumentpermissionsMapper extends BaseMapper<Documentpermissions> {
-
+    @Select("select * from documentpermissions where document_id = #{documentId} and user_id = #{userId}")
+    Documentpermissions selectByPrimaryKey(Long documentId, Long userId);
 }
 
 
