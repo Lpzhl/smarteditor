@@ -23,8 +23,13 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -169,6 +174,7 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
 
     @Override
     @HandleException
+    @Transactional
     public boolean deleteDocument(Long documentId,Long folderId,Long userId)  {
         int i = documentFolderMapper.delete(new QueryWrapper<DocumentFolder>().eq("document_id", documentId).eq("folder_id", folderId));
 
@@ -313,6 +319,7 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
                          documentInfoVO.setCreateUserNickname(userInfo.getNickname());
                          boolean isFavorited = checkIfDocumentIsFavorited(String.valueOf(userId), document.getId());
                          documentInfoVO.setIsFavorite(isFavorited);
+                         documentInfoVO.setOriginalFolder(folder.getName());
                      }
                     userFolderInfo.setDocuments(documentInfoVOList);
                 }else {
@@ -454,51 +461,65 @@ public class FolderServiceImpl extends ServiceImpl<FolderMapper, Folder>
             DeletedInfo deletedInfo = new DeletedInfo();
             deletedInfo.setDocumentId(documentId);
             deletedInfo.setUserId(userId);
-            deletedInfo.setFolderId(folderId);
+            deletedInfo.setOriginalFolderId(folderId);
             deletedInfoMapper.insert(deletedInfo);
         }
 
         return true;
     }
 
+    @Transactional
     @Override
-    public Boolean recoverDocument(RecoverDocumentDTO recoverDocumentDTO,Long userId) {
-        //  1.首先将文档从回收站中删除 并且逻辑删除改为0
-        Document document = new Document();
-        document.setId(recoverDocumentDTO.getDocumentId());
-        documentMapper.recoverDocument(document.getId());
+    public Boolean recoverDocument(RecoverDocumentDTO recoverDocumentDTO, Long userId) {
+        try {
+            // 1.首先将文档从回收站中删除 并且逻辑删除改为0
+            Document document = new Document();
+            document.setId(recoverDocumentDTO.getDocumentId());
+            documentMapper.recoverDocument(document.getId());
 
-        //  2.从删除文档中找到该文档的原始文件夹id，将文档恢复到原来的文件夹  并且把删除记录删除
-        DeletedInfo deletedInfo = new DeletedInfo();
-        LambdaQueryWrapper<DeletedInfo> deletedInfoLambdaQueryWrapper = new LambdaQueryWrapper<>();
+            // 2.从删除文档中找到该文档的原始文件夹id，将文档恢复到原来的文件夹 并且把删除记录删除
+            LambdaQueryWrapper<DeletedInfo> deletedInfoLambdaQueryWrapper = new LambdaQueryWrapper<>();
+            deletedInfoLambdaQueryWrapper.eq(DeletedInfo::getDocumentId, recoverDocumentDTO.getDocumentId());
+            DeletedInfo deletedInfo1 = deletedInfoMapper.selectO(recoverDocumentDTO.getDocumentId());
+            // 检测用户是否为会员
+            User userInfoByUserId = userDubboService.getUserInfoByUserId(userId);
+            if (userInfoByUserId.getLevel() == 0) {  // 不是会员
+                // 检测当前文档已经删除距离目前已经删除多少天了 如果超过7天则需要会员才能进行恢复
+                Instant deletionInstant = deletedInfo1.getDeletionTime().toInstant();
+                LocalDate deletionDate = deletionInstant.atZone(ZoneId.systemDefault()).toLocalDate();
+                long daysSinceDeletion = ChronoUnit.DAYS.between(deletionDate, LocalDate.now());
+                if (daysSinceDeletion > 7) {
+                    throw new RuntimeException("非会员用户无法恢复已删除超过7天的文档");
+                }
+            }
+            deletedInfoMapper.delete(deletedInfoLambdaQueryWrapper);
+            recoverDocumentDTO.setOriginalFolderId(deletedInfo1.getOriginalFolderId());
 
-        deletedInfoLambdaQueryWrapper.eq(DeletedInfo::getDocumentId, recoverDocumentDTO.getDocumentId());
-        DeletedInfo deletedInfo1 = deletedInfoMapper.selectO(recoverDocumentDTO.getDocumentId());
-        deletedInfoMapper.delete(deletedInfoLambdaQueryWrapper);
-        recoverDocumentDTO.setOriginalFolderId(deletedInfo1.getOriginalFolderId());
+            DocumentFolder documentFolder = new DocumentFolder();
+            documentFolder.setDocumentId(recoverDocumentDTO.getDocumentId());
+            documentFolder.setFolderId(recoverDocumentDTO.getOriginalFolderId());
+            documentFolderMapper.insert(documentFolder);
 
+            // 3.文件夹操作日志进行记录
+            FolderOperationLog operationLog = new FolderOperationLog();
+            operationLog.setFolderId(recoverDocumentDTO.getOriginalFolderId());
+            operationLog.setOperation("恢复");
+            operationLog.setUserId(userId);
+            Document recoveredDocument = documentMapper.selectById(recoverDocumentDTO.getDocumentId());
+            operationLog.setDocumentName(recoveredDocument.getName());
+            operationLog.setDocumentId(recoverDocumentDTO.getDocumentId());
+            folderOperationLogMapper.insert(operationLog);
 
-        DocumentFolder documentFolder = new DocumentFolder();
-        documentFolder.setDocumentId(recoverDocumentDTO.getDocumentId());
-        documentFolder.setFolderId(recoverDocumentDTO.getOriginalFolderId());
-        documentFolderMapper.insert(documentFolder);
-        //  3.文件夹操作日志进行记录
-        FolderOperationLog operationLog = new FolderOperationLog();
-        operationLog.setFolderId(recoverDocumentDTO.getOriginalFolderId());
-        operationLog.setOperation("恢复");
-        operationLog.setUserId(userId);
-        operationLog.setDocumentName(document.getName());
-        operationLog.setDocumentId(recoverDocumentDTO.getDocumentId());
-        documentMapper.selectById(recoverDocumentDTO.getDocumentId()).getName();
-        operationLog.setDocumentName(document.getName());
-        folderOperationLogMapper.insert(operationLog);
+            // 4.更新最近文档
+            RecentDocuments recentDocuments = new RecentDocuments();
+            recentDocuments.setUserId(userId);
+            recentDocuments.setDocumentId(recoverDocumentDTO.getDocumentId());
+            recentDocumentsMapper.insert(recentDocuments);
 
-        //  4.更新最近文档
-        RecentDocuments recentDocuments = new RecentDocuments();
-        recentDocuments.setUserId(userId);
-        recentDocuments.setDocumentId(recoverDocumentDTO.getDocumentId());
-        recentDocumentsMapper.insert(recentDocuments);
-        return true;
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("恢复失败");
+        }
     }
 
 
