@@ -38,13 +38,25 @@ public class DocumentpermissionsServiceImpl extends ServiceImpl<Documentpermissi
 
         BeanUtils.copyProperties(documentpermissionsDTO, documentpermissions);
 
-        if(documentpermissionsMapper.insert(documentpermissions)>0)
-        {
+        // 先检查记录是否已经存在
+        Documentpermissions existingRecord = documentpermissionsMapper.selectByPrimaryKey(documentpermissions.getDocumentId(),documentpermissions.getUserId());
+
+        int result;
+        if (existingRecord != null) {
+            // 如果已经存在该记录，则执行更新操作
+            result = documentpermissionsMapper.updateById(documentpermissions);
+        } else {
+            // 如果不存在该记录，则执行插入操作
+            result = documentpermissionsMapper.insert(documentpermissions);
+        }
+
+        if (result > 0) {
             return true;
-        }else{
-           throw new BusinessException(ErrorCode.SET_USER_VISBILITY_ERROR);
+        } else {
+            throw new BusinessException(ErrorCode.SET_USER_VISBILITY_ERROR);
         }
     }
+
 
     @Override
     public List<Permissions> getPermissionsForUserAndDocument(Long userId, Long documentId) {
