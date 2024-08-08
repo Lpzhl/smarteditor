@@ -22,10 +22,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -119,6 +116,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
             ordersVOList.add(ordersVO);
         }
 
+        // 对订单列表按照订单时间降序排序
+        ordersVOList.sort(Comparator.comparing(OrdersVO::getOrderTime).reversed());
+
         // 返回处理后的订单列表
         return Result.success(ordersVOList);
     }
@@ -160,7 +160,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
     public void processExpiredBookings() {
         long currentTime = System.currentTimeMillis();
         Set<String> expiredBookings = stringRedisTemplate.opsForZSet().rangeByScore("orders", 0, currentTime);
-        System.out.println("========================");
+        System.out.println("===========轮询订单是否过期=============");
         for (String orderId : expiredBookings) {
             // 开始事务
             TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
