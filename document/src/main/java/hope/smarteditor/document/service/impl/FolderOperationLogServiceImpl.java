@@ -30,7 +30,7 @@ public class FolderOperationLogServiceImpl extends ServiceImpl<FolderOperationLo
     public List<FolderOperationLog> getFolderLog(Long folderId) {
         QueryWrapper<FolderOperationLog> folderOperationLogQueryWrapper = new QueryWrapper<>();
 
-        folderOperationLogQueryWrapper.eq("folder_id",folderId);
+        folderOperationLogQueryWrapper.eq("folder_id",folderId).orderByDesc("operation_time");
         List<FolderOperationLog> folderOperationLogs = folderOperationLogMapper.selectList(folderOperationLogQueryWrapper);
         for (FolderOperationLog folderOperationLog : folderOperationLogs) {
             if(folderOperationLog.getDocumentId()!=null){
