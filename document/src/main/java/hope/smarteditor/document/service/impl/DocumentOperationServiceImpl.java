@@ -24,7 +24,7 @@ public class DocumentOperationServiceImpl extends ServiceImpl<DocumentOperationM
     @Override
     public List<DocumentOperation> getDocumentLog(Long documentId) {
         QueryWrapper<DocumentOperation> documentOperationQueryWrapper = new QueryWrapper<>();
-        documentOperationQueryWrapper.eq("document_id",documentId);
+        documentOperationQueryWrapper.eq("document_id",documentId).orderByDesc("operation_time");
         return baseMapper.selectList(documentOperationQueryWrapper);
     }
 }
