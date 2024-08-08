@@ -4,6 +4,7 @@ import hope.smarteditor.common.model.dto.*;
 import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.model.entity.Folder;
 import com.baomidou.mybatisplus.extension.service.IService;
+import hope.smarteditor.common.model.vo.DocumentInfoVO;
 import hope.smarteditor.common.model.vo.UserFolderInfoVO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -27,7 +28,7 @@ public interface FolderService extends IService<Folder> {
 
     boolean createDocument(Long folderId, Document document, Long userId);
 
-    boolean deleteDocument(Long documentId);
+    boolean deleteDocument(Long documentId,Long folderId,Long userId);
 
     boolean moveDocument(MoveDocumentDTO moveDocumentDTO,Long userId);
 
@@ -37,8 +38,11 @@ public interface FolderService extends IService<Folder> {
 
     List<Folder> searchFoldersByName(String keyword, Long userId);
 
-    List<Document> getDocumentByFolderId(Long folderId);
+    List<DocumentInfoVO> getDocumentByFolderId(Long folderId);
 
     String deleteRecentDocument(Long documentId, Long userId);
 
+    Boolean deleteDocumentByFolderId(DeleteDocumentByFolderIdDTO deleteDocumentByFolderIdDTO,Long userId);
+
+    Boolean recoverDocument(RecoverDocumentDTO recoverDocumentDTO,Long userId);
 }
