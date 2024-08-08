@@ -11,10 +11,11 @@
             <result property="content" column="content" jdbcType="VARCHAR"/>
             <result property="summary" column="summary" jdbcType="VARCHAR"/>
             <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="username" column="username" jdbcType="VARCHAR"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id,document_id,version,
-        content,summary,update_time
+        content,summary,update_time,username
     </sql>
 </mapper>
