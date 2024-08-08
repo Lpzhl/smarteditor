@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -423,7 +424,9 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         LambdaQueryWrapper<DeletedInfo> deletedInfoLambdaQueryWrapper = new LambdaQueryWrapper<>();
         deletedInfoLambdaQueryWrapper.eq(DeletedInfo::getDocumentId, document.getId());
         DeletedInfo deletedInfo = deletedInfoMapper.selectOne(deletedInfoLambdaQueryWrapper);
-        documentInfoVO.setUpdateTime(deletedInfo.getDeletionTime());
+        if(deletedInfo != null) {
+            documentInfoVO.setUpdateTime(deletedInfo.getDeletionTime());
+        }
         User userInfo = userDubboService.getUserInfoByUserId(document.getUserId());
         documentInfoVO.setCreateUserNickname(userInfo.getNickname());
         boolean isFavorited = checkIfDocumentIsFavorited(String.valueOf(userId), document.getId());
@@ -600,11 +603,64 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
     }
 
     @Override
+    @Transactional
     public void deleteDocumentBatch(List<Long> documentIds) {
+        if (documentIds == null || documentIds.isEmpty()) {
+            return;
+        }
 
-        // 删除文档
+        // 获取所有待删除文档的详细信息
+        List<Document> documents = documentMapper.selectBatchIds(documentIds);
+        if (documents == null || documents.isEmpty()) {
+            return;
+        }
+
+        // 记录每个文档对应的原文件夹id和用户id
+        Map<Long, Long> documentFolderMap = new HashMap<>();
+        Map<Long, Long> documentUserMap = new HashMap<>();
+        for (Document document : documents) {
+            // 获取文档位置
+            documentFolderMap.put(document.getId(),documentFolderMapper.selectOne(new QueryWrapper<DocumentFolder>().eq("document_id", document.getId())).getFolderId());
+            documentUserMap.put(document.getId(), document.getUserId());
+        }
+
+        // 删除文档文件夹关联记录
+        documentFolderMapper.delete(new QueryWrapper<DocumentFolder>().in("document_id", documentIds));
+
+        // 执行逻辑删除，并设置删除时间
         documentMapper.deleteBatchIds(documentIds);
+
+        // 删除最近文档的记录
+        LambdaQueryWrapper<RecentDocuments> recentDocumentsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        recentDocumentsLambdaQueryWrapper.in(RecentDocuments::getDocumentId, documentIds);
+        recentDocumentsMapper.delete(recentDocumentsLambdaQueryWrapper);
+
+        // 新增操作日志并插入回收站
+        for (Long documentId : documentIds) {
+            Long folderId = documentFolderMap.get(documentId);
+            Long userId = documentUserMap.get(documentId);
+            Document document = documents.stream().filter(doc -> doc.getId().equals(documentId)).findFirst().orElse(null);
+
+            if (document != null) {
+                // 新增操作日志
+                FolderOperationLog operationLog = new FolderOperationLog();
+                operationLog.setFolderId(folderId);
+                operationLog.setOperation("删除");
+                operationLog.setUserId(userId);
+                operationLog.setDocumentName(document.getName());
+                operationLog.setDocumentId(documentId);
+                folderOperationLogMapper.insert(operationLog);
+
+                // 插入回收站
+                DeletedInfo deletedInfo = new DeletedInfo();
+                deletedInfo.setDocumentId(documentId);
+                deletedInfo.setUserId(userId);
+                deletedInfo.setOriginalFolderId(folderId);
+                deletedInfoMapper.insert(deletedInfo);
+            }
+        }
     }
+
 
     @Override
     public void renameDocument(Long documentId, String newName,Long userId)  {
