@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
+import hope.smarteditor.common.constant.UserInfoConstant;
 import hope.smarteditor.common.model.dto.*;
 import hope.smarteditor.common.model.entity.*;
 import hope.smarteditor.common.model.vo.*;
@@ -19,13 +20,16 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboReference;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static hope.smarteditor.common.constant.MessageConstant.DEF;
 
@@ -82,8 +86,8 @@ public class DocumentMangeController {
      */
 
     @ApiOperation("更新文档信息")
+
     @PutMapping("/update/{documentId}")
-    @LzhLog
     @PermissionCheck(value = {"可管理", "可编辑"})
     public Result<Document> updateDocument(@PathVariable("documentId") Long documentId, @RequestBody DocumentUpdateDTO documentUpdateDTO) {
         try {
@@ -166,7 +170,24 @@ public class DocumentMangeController {
     @ApiOperation("获取用户已经删除的文档")
     public Result getDeletedDocuments(@PathVariable("userId") Long userId) {
         List<DocumentInfoVO> deletedDocuments = documentService.getDeletedDocuments(userId);
-        return Result.success(deletedDocuments);
+
+        List<DeleteDocumentInfoVO> deleteDocumentInfoVOList = deletedDocuments.stream().map(document -> {
+            DeleteDocumentInfoVO deleteDocumentInfoVO = new DeleteDocumentInfoVO();
+            BeanUtils.copyProperties(document, deleteDocumentInfoVO);
+            int daysRemaining = calculateDaysRemaining(document.getUpdateTime());
+            deleteDocumentInfoVO.setDay(daysRemaining);
+            return deleteDocumentInfoVO;
+        }).sorted(Comparator.comparingInt(DeleteDocumentInfoVO::getDay).reversed()).collect(Collectors.toList());
+
+        return Result.success(deleteDocumentInfoVOList);
+    }
+
+    private int calculateDaysRemaining(Date updateTime) {
+        long currentTime = System.currentTimeMillis();
+        long updateTimeMillis = updateTime.getTime();
+        long timeDifference = currentTime - updateTimeMillis;
+        long daysDifference = timeDifference / (1000 * 60 * 60 * 24);
+        return (int) (UserInfoConstant.DELETE_DAYS_REMAINING - daysDifference);
     }
 
     /**
