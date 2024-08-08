@@ -11,8 +11,11 @@ import hope.smarteditor.user.mapper.UserMapper;
 import hope.smarteditor.user.service.SignInService;
 import hope.smarteditor.user.mapper.SignInMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -32,6 +35,9 @@ public class SignInServiceImpl extends ServiceImpl<SignInMapper, SignIn>
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
     @Override
     public String sign(Long userId) {
         // 插入签到记录
@@ -46,13 +52,16 @@ public class SignInServiceImpl extends ServiceImpl<SignInMapper, SignIn>
 
         if (user != null) {
             // 增加用户余额
-            user.setMoney(user.getMoney() + UserInfoConstant.USER_UP_MONEY);
+            int upMoney = (user.getLevel() == UserInfoConstant.VIP_USER) ? UserInfoConstant.VIP_USER_UP_MONEY : UserInfoConstant.USER_UP_MONEY;
+            user.setMoney(user.getMoney() + upMoney);
+
             // 更新用户信息
             userMapper.updateById(user);
         }
 
         return MessageConstant.SUCCESSFUL;
     }
+
 
     /**
      * 检查用户是否已经签到了
@@ -64,6 +73,7 @@ public class SignInServiceImpl extends ServiceImpl<SignInMapper, SignIn>
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
 
+        //  使用redis优化性能  redis保存用户签到的记录 有效时间为当前时间距离明天的时间差
         QueryWrapper<SignIn> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId)
                 .between("sign_in_date", startOfDay, endOfDay);
@@ -71,6 +81,8 @@ public class SignInServiceImpl extends ServiceImpl<SignInMapper, SignIn>
         int count = signInMapper.selectCount(queryWrapper);
         return count > 0;
     }
+
+
 
 }
 
