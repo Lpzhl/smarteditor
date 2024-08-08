@@ -20,7 +20,7 @@ public class OrderBuyVipDTO implements Serializable {
     /**
      * 订单金额
      */
-    private Integer amount;
+    private Double amount;
 
     /**
      * 订单时间

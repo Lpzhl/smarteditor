@@ -21,7 +21,7 @@ public class OrderBuyPointsDTO implements Serializable {
     /**
      * 订单金额
      */
-    private Integer amount;
+    private Double amount;
 
     /**
      * 订单时间
@@ -34,6 +34,9 @@ public class OrderBuyPointsDTO implements Serializable {
      */
     private String status;
 
+    /**
+     * (购买的xx积分  xx个会员)
+     */
     private Integer num;
     /**
      * 订单描述
