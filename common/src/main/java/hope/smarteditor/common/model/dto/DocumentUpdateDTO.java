@@ -1,5 +1,6 @@
 package hope.smarteditor.common.model.dto;
 
+import hope.smarteditor.common.model.entity.TemplateDocument;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -14,6 +15,5 @@ public class DocumentUpdateDTO implements Serializable {
     private Integer status;
     private String subject;
     private String category;
-
     private Long userId;
 }

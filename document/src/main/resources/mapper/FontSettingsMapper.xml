@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hope.smarteditor.document.mapper.FontSettingsMapper">
+
+    <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.FontSettings">
+            <id property="settingId" column="setting_id" jdbcType="INTEGER"/>
+            <result property="elementId" column="element_id" jdbcType="INTEGER"/>
+            <result property="fontFamily" column="font_family" jdbcType="VARCHAR"/>
+            <result property="fontSize" column="font_size" jdbcType="INTEGER"/>
+            <result property="lineHeight" column="line_height" jdbcType="DECIMAL"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        setting_id,element_id,font_family,
+        font_size,line_height
+    </sql>
+</mapper>

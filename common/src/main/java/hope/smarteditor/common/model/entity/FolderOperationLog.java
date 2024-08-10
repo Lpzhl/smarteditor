@@ -6,10 +6,12 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.util.Date;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 /**
- * 
+ *
  * @TableName folder_operation_log
  */
 @TableName(value ="folder_operation_log")
@@ -49,6 +51,7 @@ public class FolderOperationLog implements Serializable {
     /**
      * 操作时间
      */
+    @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date operationTime;
 
     @TableField(exist = false)

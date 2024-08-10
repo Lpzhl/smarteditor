@@ -32,7 +32,11 @@ public class User implements Serializable {
 
     private String inviteCode;
 
+    private String userRole;
+
     private Integer counts;
+
+    private Integer status;
 
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;

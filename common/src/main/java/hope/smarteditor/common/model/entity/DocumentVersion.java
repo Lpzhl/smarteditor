@@ -16,6 +16,7 @@ import lombok.Data;
 @TableName(value ="document_version")
 @Data
 public class DocumentVersion implements Serializable {
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long documentId;
@@ -27,6 +28,8 @@ public class DocumentVersion implements Serializable {
     private String summary;
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date updateTime;
+
+    private String username;
 
     private static final long serialVersionUID = 1L;
 }
