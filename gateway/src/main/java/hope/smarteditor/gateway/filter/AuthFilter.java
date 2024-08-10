@@ -130,7 +130,7 @@ public class AuthFilter implements GlobalFilter, Ordered {
             // 检查请求路径是否为AI接口
             if (isAiEndpoint(encodedPath)) {
                 // 扣除用户费用
-                boolean isDeducted = userDubboService.checkAndDeduct(tokenUserId, AI_CALL_DEDUCTION);
+                boolean isDeducted = userDubboService.checkAndDeduct(tokenUserId, AI_CALL_DEDUCTION,encodedPath);
                 if (!isDeducted) {
                     return onError(response, HttpStatus.FORBIDDEN, "余额不足");
                 }

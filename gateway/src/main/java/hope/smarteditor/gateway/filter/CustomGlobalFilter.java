@@ -102,7 +102,6 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
                             // 拼接字符串
                             return super.writeWith(
                                     fluxBody.map(dataBuffer -> {
-                                        // todo 业务逻辑处理消费ai
                                         try {
                                             // 检查请求路径是否为AI接口
                                             if (isAiEndpoint(encodedPath)) {
@@ -111,7 +110,7 @@ public class CustomGlobalFilter implements GlobalFilter, Ordered {
                                                 Long userId = Long.valueOf(userIdHeader);
 
                                                 // 扣除用户费用
-                                                boolean isDeducted = userDubboService.deductMoney(userId, AI_CALL_DEDUCTION);
+                                                boolean isDeducted = userDubboService.deductMoney(userId, AI_CALL_DEDUCTION,encodedPath);
                                                 if (!isDeducted) {
                                                     return bufferFactory.wrap("余额不足".getBytes(StandardCharsets.UTF_8));
                                                 }
