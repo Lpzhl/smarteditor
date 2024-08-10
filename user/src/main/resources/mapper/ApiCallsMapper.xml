@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hope.smarteditor.user.mapper.ApiCallsMapper">
+
+    <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.ApiCalls">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="apiId" column="api_id" jdbcType="INTEGER"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="statusCode" column="status_code" jdbcType="INTEGER"/>
+            <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,api_id,user_id,
+        status_code,created_at
+    </sql>
+</mapper>
