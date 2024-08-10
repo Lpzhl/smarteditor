@@ -45,10 +45,17 @@ public class UserVO implements Serializable {
     @ApiModelProperty("模板使用次数")
     private Integer counts;
 
+    @ApiModelProperty("角色")
+    private String userRole;
+
+    @ApiModelProperty("用户状态")
+    private Integer status;
+
+    @ApiModelProperty("注册时间")
+    @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
+    private Date createTime;
 
     @ApiModelProperty("会员购到期时间")
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd")
     private Date memberExpireTime;
-
-
 }

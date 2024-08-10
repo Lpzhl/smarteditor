@@ -9,4 +9,6 @@ import java.io.Serializable;
 public class CollaborationVO implements Serializable {
     private User user;
     private Document document;
+    // 权限
+    private long permission;
 }
