@@ -2,17 +2,17 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="hope.smarteditor.document.mapper.StylesMapper">
+<mapper namespace="hope.smarteditor.mapper.StylesMapper">
 
     <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.Styles">
             <id property="styleId" column="style_id" jdbcType="INTEGER"/>
             <result property="styleName" column="style_name" jdbcType="VARCHAR"/>
-            <result property="ownerId" column="owner_id" jdbcType="INTEGER"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
             <result property="isDeleted" column="is_deleted" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        style_id,style_name,owner_id,
+        style_id,style_name,user_id,
         is_deleted
     </sql>
 </mapper>

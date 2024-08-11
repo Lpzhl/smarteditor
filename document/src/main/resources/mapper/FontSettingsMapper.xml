@@ -5,15 +5,16 @@
 <mapper namespace="hope.smarteditor.document.mapper.FontSettingsMapper">
 
     <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.FontSettings">
-            <id property="settingId" column="setting_id" jdbcType="INTEGER"/>
-            <result property="elementId" column="element_id" jdbcType="INTEGER"/>
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="name" column="name" jdbcType="VARCHAR"/>
+            <result property="stylesId" column="styles_id" jdbcType="BIGINT"/>
             <result property="fontFamily" column="font_family" jdbcType="VARCHAR"/>
             <result property="fontSize" column="font_size" jdbcType="INTEGER"/>
-            <result property="lineHeight" column="line_height" jdbcType="DECIMAL"/>
+            <result property="lineHeight" column="line_height" jdbcType="DOUBLE"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        setting_id,element_id,font_family,
-        font_size,line_height
+        id,name,styles_id,
+        font_family,font_size,line_height
     </sql>
 </mapper>
