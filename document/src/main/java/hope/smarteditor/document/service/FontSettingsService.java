@@ -5,10 +5,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
 * @author LoveF
-* @description 针对表【font_settings(存储每个样式元素的字体格式、大小和行间距等设置)】的数据库操作Service
-* @createDate 2024-08-10 22:13:42
+* @description 针对表【font_settings】的数据库操作Service
+* @createDate 2024-08-11 18:58:25
 */
 public interface FontSettingsService extends IService<FontSettings> {
 
-    FontSettings getFontSettingsByElementId(Integer elementId);
 }

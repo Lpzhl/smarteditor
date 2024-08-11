@@ -5,29 +5,33 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
-import java.math.BigDecimal;
 import lombok.Data;
 
 /**
- * 存储每个样式元素的字体格式、大小和行间距等设置
+ *
  * @TableName font_settings
  */
 @TableName(value ="font_settings")
 @Data
 public class FontSettings implements Serializable {
     /**
-     * 字体设置ID，主键
+     * 主键id
      */
     @TableId(type = IdType.AUTO)
-    private Integer settingId;
+    private Long id;
 
     /**
-     * 关联的元素ID，外键
+     * 类型
      */
-    private Integer elementId;
+    private String name;
 
     /**
-     * 字体类型
+     * 样式id
+     */
+    private Long stylesId;
+
+    /**
+     * 文字样式
      */
     private String fontFamily;
 
@@ -39,7 +43,7 @@ public class FontSettings implements Serializable {
     /**
      * 行间距
      */
-    private BigDecimal lineHeight;
+    private Double lineHeight;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

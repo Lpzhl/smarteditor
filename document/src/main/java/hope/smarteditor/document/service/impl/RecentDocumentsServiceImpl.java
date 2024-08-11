@@ -160,8 +160,6 @@ public class RecentDocumentsServiceImpl extends ServiceImpl<RecentDocumentsMappe
 
         List<DocumentInfoVO> result = new ArrayList<>();
 
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Shanghai"));
-
         for (Long documentId : documentIds) {
             Document document = documentMapper.selectById(documentId);
             QueryWrapper<RecentDocuments> recentDocumentsQueryWrapper = new QueryWrapper<>();

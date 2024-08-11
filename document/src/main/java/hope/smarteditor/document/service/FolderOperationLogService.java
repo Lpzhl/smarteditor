@@ -2,6 +2,7 @@ package hope.smarteditor.document.service;
 
 import hope.smarteditor.common.model.entity.FolderOperationLog;
 import com.baomidou.mybatisplus.extension.service.IService;
+import hope.smarteditor.common.model.vo.FolderOperationLogVO;
 
 import java.util.List;
 
@@ -12,5 +13,5 @@ import java.util.List;
 */
 public interface FolderOperationLogService extends IService<FolderOperationLog> {
 
-    List<FolderOperationLog> getFolderLog(Long folderId);
+    List<FolderOperationLogVO> getFolderLog(Long folderId);
 }
