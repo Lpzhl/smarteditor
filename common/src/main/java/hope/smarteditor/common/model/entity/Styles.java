@@ -8,27 +8,33 @@ import java.io.Serializable;
 import lombok.Data;
 
 /**
- * 存储每种样式中各级标题和正文的基本信息
- * @TableName style_elements
+ * 存储文档样式的基本信息
+ * @TableName styles
  */
-@TableName(value ="style_elements")
+@TableName(value ="styles")
 @Data
-public class StyleElements implements Serializable {
+public class Styles implements Serializable {
     /**
-     * 元素ID，主键
+     * 样式ID，主键
      */
     @TableId(type = IdType.AUTO)
-    private Integer elementId;
-
-    /**
-     * 关联的样式ID，外键
-     */
     private Integer styleId;
 
     /**
-     * 元素类型（一级标题、二级标题、三级标题、正文）
+     * 样式名称
      */
-    private String elementType;
+    private String styleName;
+
+    /**
+     * 所属者ID
+     */
+    private Long userId;
+
+    /**
+     * 逻辑删除
+     */
+    @TableField("is_deleted")
+    private Integer isDeleted;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

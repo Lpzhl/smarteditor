@@ -6,6 +6,7 @@ import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.common.model.dto.*;
 import hope.smarteditor.common.model.entity.Document;
 import hope.smarteditor.common.model.entity.DocumentFolder;
+import hope.smarteditor.common.model.vo.FolderOperationLogVO;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.document.annotation.LzhLog;
 import hope.smarteditor.document.mapper.DocumentFolderMapper;
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 @RestController
 @RequestMapping("folder")
@@ -182,7 +184,7 @@ public class FolderController {
      @LzhLog
      @ApiOperation("获取某个文件夹的所有操作日志")
 
- public Result getFolderLog(@PathVariable("folderId") Long folderId){
+    public Result<List<FolderOperationLogVO>> getFolderLog(@PathVariable("folderId") Long folderId){
      return Result.success(folderOperationLogService.getFolderLog(folderId), ErrorCode.SUCCESS.getCode(), MessageConstant.OPERATION_SUCCESSFUL);
      }
 

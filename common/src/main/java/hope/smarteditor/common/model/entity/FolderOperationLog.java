@@ -48,6 +48,7 @@ public class FolderOperationLog implements Serializable {
      */
     private String operation;
 
+
     /**
      * 操作时间
      */
