@@ -9,7 +9,7 @@ import java.util.List;
 public class StyleVO implements Serializable {
     private int styleId;       // 样式ID
     private String styleName;  // 样式名称
-    private int ownerId;       // 所属者ID
-    private List<StyleElementVO> elements;  // 样式中的元素列表
+    private Long userId;       // 所属者ID
+    private List<FontSettingsVO> fontSettingsVOS;  // 样式中的元素列表
 
 }

@@ -6,27 +6,32 @@ import java.io.Serializable;
 import lombok.Data;
 
 /**
- * 存储文档样式的基本信息
- * @TableName styles
+ *
+ * @TableName todo_lists
  */
-@TableName(value ="styles")
+@TableName(value ="todo_lists")
 @Data
-public class Styles implements Serializable {
+public class TodoLists implements Serializable {
     /**
-     * 样式ID，主键
+     * 主键
      */
     @TableId(type = IdType.AUTO)
-    private Integer styleId;
+    private Long listId;
 
     /**
-     * 样式名称
-     */
-    private String styleName;
-
-    /**
-     * 所属者ID
+     * 用户ID
      */
     private Long userId;
+
+    /**
+     * 清单名称
+     */
+    private String listName;
+
+    /**
+     * 完成状态 0未完成    1已完成
+     */
+    private Integer isCompleted;
 
     /**
      * 逻辑删除
