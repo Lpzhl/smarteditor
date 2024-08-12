@@ -3,10 +3,14 @@ package hope.smarteditor.user.controller;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.constant.MessageConstant;
 import hope.smarteditor.common.model.dto.PaperReviewRequestDTO;
+import hope.smarteditor.common.model.entity.ApiCalls;
+import hope.smarteditor.common.model.entity.ApiInfo;
 import hope.smarteditor.common.model.vo.BaiduResultVO;
 import hope.smarteditor.common.model.vo.OcrVO;
 import hope.smarteditor.common.result.Result;
 import hope.smarteditor.user.annotation.LzhLog;
+import hope.smarteditor.user.service.ApiCallsService;
+import hope.smarteditor.user.service.ApiInfoService;
 import hope.smarteditor.user.service.UserService;
 import io.minio.errors.*;
 import io.swagger.annotations.Api;
@@ -15,29 +19,43 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
 @RequestMapping("/ai")
-@Api(tags = "AI关接口")
+@Api(tags = "AI相关接口")
 public class AiController {
 
     @Autowired
     private UserService userService;
+
+    @Resource
+    private ApiCallsService apiCallsService;
+
+    @Resource
+    private ApiInfoService apiInfoService;
+
+
     /**
      * ocr
      */
     @PostMapping("/ocr")
     @ApiOperation("OCR识别")
     @LzhLog
-    public Result<OcrVO> ocr(@RequestParam("file") MultipartFile file) throws NoSuchAlgorithmException, InvalidKeyException, MinioException, IOException {
+    public Result<OcrVO> ocr(@RequestParam("file") MultipartFile file,HttpServletRequest request) throws NoSuchAlgorithmException, InvalidKeyException, MinioException, IOException {
+        Long userId = Long.valueOf(request.getHeader("userId"));
         OcrVO ocrvo = userService.ocr(file);
         if (ocrvo != null) {
+            createApiCalls("OCR识别",userId,ErrorCode.SUCCESS.getCode());
             return Result.success(ocrvo, ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
         } else {
+            createApiCalls("OCR识别",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.FILE_UPLOAD_FAILED,500);
         }
     }
@@ -49,13 +67,16 @@ public class AiController {
     @PostMapping("/textCorrection")
     @ApiOperation("文本纠错")
     @LzhLog
-    public Result textCorrection(@RequestParam("text") String text) {
+    public Result textCorrection(@RequestParam("text") String text,HttpServletRequest request) {
+        Long userId = Long.valueOf(request.getHeader("userId"));
         /*System.out.println("text = " + text);*/
         String correctedText = userService.textCorrection(text);
         //String correctedText = "文本纠错";
         if (correctedText == null) {
+            createApiCalls("文本纠错",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("文本纠错",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(correctedText, ErrorCode.SUCCESS.getCode(), MessageConstant.TEXT_CORRECTION_SUCCESSFUL);
     }
 
@@ -65,11 +86,14 @@ public class AiController {
     @PostMapping("/titleGeneration")
     @ApiOperation("标题生成")
     @LzhLog
-    public Result titleGeneration(@RequestParam("text") String text) {
+    public Result titleGeneration(@RequestParam("text") String text,HttpServletRequest request) {
+        Long userId = Long.valueOf(request.getHeader("userId"));
         String s = userService.titleGeneration(text);
         if (s == null) {
+            createApiCalls("标题生成",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("标题生成",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.TITLE_GENERATION_SUCCESSFUL);
     }
 
@@ -79,11 +103,14 @@ public class AiController {
     @PostMapping("/textSummarization")
     @ApiOperation("文本摘要")
     @LzhLog
-    public Result textSummarization(@RequestParam("text") String text) {
+    public Result textSummarization(@RequestParam("text") String text,HttpServletRequest request) {
+        Long userId = Long.valueOf(request.getHeader("userId"));
         String s = userService.textSummarization(text);
         if (s == null) {
+            createApiCalls("文本摘要",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("文本摘要",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.TEXT_SUMMARIZATION_SUCCESSFUL);
     }
 
@@ -93,11 +120,14 @@ public class AiController {
     @PostMapping("/textContinuation")
     @ApiOperation("续写")
     @LzhLog
-    public Result textContinuation(@RequestParam("text") String text,@RequestParam("passage") String passage) {
+    public Result textContinuation(@RequestParam("text") String text,@RequestParam("passage") String passage,HttpServletRequest request)  {
+        Long userId = Long.valueOf(request.getHeader("userId"));
         String s = userService.textContinuation(text, passage);
         if (s == null) {
+            createApiCalls("续写",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("续写",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.TEXT_CONTINUATION_SUCCESSFUL);
     }
 
@@ -107,11 +137,14 @@ public class AiController {
     @PostMapping("/paperContentGeneration")
     @ApiOperation("论文内容生成")
     @LzhLog
-    public Result paperContentGeneration(@RequestParam("text") String text,@RequestParam("project") String project,@RequestParam("paper_type") String paper_type,@RequestParam("directory_type") String  directory_type) {
+    public Result paperContentGeneration(@RequestParam("text") String text,@RequestParam("project") String project,@RequestParam("paper_type") String paper_type,@RequestParam("directory_type") String  directory_type,HttpServletRequest request) {
+        Long userId = Long.valueOf(request.getHeader("userId"));
         String s = userService.paperContentGeneration(text, project, paper_type, directory_type);
         if (s == null) {
+            createApiCalls("论文内容生成",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("论文内容生成",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
     }
 
@@ -121,11 +154,14 @@ public class AiController {
     @PostMapping("/paperOutlineGeneration")
     @ApiOperation("论文大纲生成")
     @LzhLog
-    public Result paperOutlineGeneration(@RequestParam("text") String text,@RequestParam("project") String project,@RequestParam("paper_type") String paper_type,@RequestParam("directory_type") String  directory_type) {
+    public Result paperOutlineGeneration(@RequestParam("text") String text,@RequestParam("project") String project,@RequestParam("paper_type") String paper_type,@RequestParam("directory_type") String  directory_type,HttpServletRequest request)  {
         String s = userService.paperOutlineGeneration(text, project, paper_type, directory_type);
+        Long userId = Long.valueOf(request.getHeader("userId"));
         if (s == null) {
+            createApiCalls("论文大纲生成",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("论文大纲生成",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
     }
 
@@ -136,12 +172,14 @@ public class AiController {
     @PostMapping("/baidu")
     @ApiOperation("百度")
     @LzhLog
-    public Result baidu(@RequestParam("text") String text) {
-        System.out.println("百度text = " + text);
+    public Result baidu(@RequestParam("text") String text,HttpServletRequest request) {
+        Long userId = Long.valueOf(request.getHeader("userId"));
         List<BaiduResultVO> s = userService.baidu(text);
         if (s == null) {
+            createApiCalls("百度",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("百度",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
     }
 
@@ -152,8 +190,15 @@ public class AiController {
      @PostMapping("/ocrTable")
      @ApiOperation("表格识别")
      @LzhLog
-     public Result ocrTable(@RequestParam("file") MultipartFile file) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
-         return Result.success(userService.ocrTable(file),ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
+     public Result ocrTable(@RequestParam("file") MultipartFile file,HttpServletRequest request) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+        Long userId = Long.valueOf(request.getHeader("userId"));
+         OcrVO ocrVO = userService.ocrTable(file);
+         if (ocrVO == null) {
+             createApiCalls("表格识别",userId,ErrorCode.NETWORK_ERROR.getCode());
+             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
+         }
+         createApiCalls("表格识别",userId,ErrorCode.SUCCESS.getCode());
+         return Result.success(ocrVO,ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
      }
 
     /**
@@ -162,8 +207,15 @@ public class AiController {
      @PostMapping("/asr")
      @ApiOperation("音频识别ASR")
      @LzhLog
-     public Result asr(@RequestParam("file") MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
-            return Result.success(userService.asr(file),ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
+     public Result asr(@RequestParam("file") MultipartFile file,HttpServletRequest request) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+         Long userId = Long.valueOf(request.getHeader("userId"));
+         OcrVO asr = userService.asr(file);
+         if (asr == null) {
+             createApiCalls("音频识别ASR",userId,ErrorCode.NETWORK_ERROR.getCode());
+             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
+         }
+         createApiCalls("音频识别ASR",userId,ErrorCode.SUCCESS.getCode());
+         return Result.success(asr,ErrorCode.SUCCESS.getCode(), MessageConstant.FILE_UPLOAD_SUCCESSFUL);
      }
 
     /**
@@ -172,11 +224,14 @@ public class AiController {
      @PostMapping("/createChart")
      @ApiOperation("图标生成")
      @LzhLog
-     public Result createChart(@RequestParam("text") String text) {
+     public Result createChart(@RequestParam("text") String text,HttpServletRequest request) {
+         Long userId = Long.valueOf(request.getHeader("userId"));
          String s = userService.createChart(text);
         if (s == null) {
+            createApiCalls("图标生成",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("图标生成",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
      }
 
@@ -186,11 +241,14 @@ public class AiController {
      @PostMapping("/fixFormat")
      @ApiOperation("格式")
      @LzhLog
-     public Result format(@RequestParam("text") String text) {
+     public Result format(@RequestParam("text") String text,HttpServletRequest request)  {
+         Long userId = Long.valueOf(request.getHeader("userId"));
      String s = userService.format(text);
         if (s == null) {
+            createApiCalls("格式",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("格式",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
      }
 
@@ -200,12 +258,15 @@ public class AiController {
      @PostMapping("/rewrite")
      @ApiOperation("重写")
      @LzhLog
-     public Result rewrite(@RequestParam("text") String text) {
+     public Result rewrite(@RequestParam("text") String text,HttpServletRequest request) {
+         Long userId = Long.valueOf(request.getHeader("userId"));
          String s = userService.rewrite(text);
          //String s = "重写";
         if (s == null) {
+            createApiCalls("重写",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("重写",userId,ErrorCode.SUCCESS.getCode());
          return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
      }
 
@@ -215,12 +276,15 @@ public class AiController {
      @PostMapping("/expansion")
      @ApiOperation("扩写")
      @LzhLog
-      public Result expansion(@RequestParam("text") String text) {
+      public Result expansion(@RequestParam("text") String text,HttpServletRequest request)  {
+         Long userId = Long.valueOf(request.getHeader("userId"));
           String s = userService.expansion(text);
           //String s = "扩写";
         if (s == null) {
+            createApiCalls("扩写",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("扩写",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
 
      }
@@ -231,12 +295,15 @@ public class AiController {
      @PostMapping("/abbreviation")
      @ApiOperation("缩写")
      @LzhLog
-     public Result abbreviation(@RequestParam("text") String text) {
+     public Result abbreviation(@RequestParam("text") String text,HttpServletRequest request) {
+         Long userId = Long.valueOf(request.getHeader("userId"));
          String s = userService.abbreviation(text);
          //String s = "缩写";
         if (s == null) {
+            createApiCalls("缩写",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("缩写",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
 
      }
@@ -247,12 +314,15 @@ public class AiController {
      @PostMapping("/textBeautification")
      @ApiOperation("文本润色")
      @LzhLog
-     public Result polish(@RequestParam("text") String text, @RequestParam("requirement") String requirement)  {
+     public Result polish(@RequestParam("text") String text, @RequestParam("requirement") String requirement,HttpServletRequest request){
+         Long userId = Long.valueOf(request.getHeader("userId"));
          String s = userService.polish(text,requirement);
          //String s = "润色";
         if (s == null) {
+            createApiCalls("文本润色",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("文本润色",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
      }
 
@@ -262,11 +332,14 @@ public class AiController {
      @PostMapping("/dataVisualization")
      @ApiOperation("数据可视化")
      @LzhLog
-     public Result dataVisualization(@RequestParam("text") String text,@RequestParam("image_type") String image_type)   {
+     public Result dataVisualization(@RequestParam("text") String text,@RequestParam("image_type") String image_type,HttpServletRequest request)   {
+         Long userId = Long.valueOf(request.getHeader("userId"));
          String s = userService.dataVisualization(text,image_type);
         if (s == null) {
+            createApiCalls("数据可视化",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("数据可视化",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
      }
 
@@ -276,11 +349,14 @@ public class AiController {
      @PostMapping("/translate")
      @ApiOperation("翻译")
      @LzhLog
-     public Result translate(@RequestParam("text") String text)   {
+     public Result translate(@RequestParam("text") String text,HttpServletRequest request)   {
+         Long userId = Long.valueOf(request.getHeader("userId"));
          String s = userService.translate(text);
         if (s == null) {
+            createApiCalls("翻译",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("翻译",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
      }
 
@@ -290,11 +366,14 @@ public class AiController {
      @PostMapping("/mindMap")
      @ApiOperation("思维导图")
      @LzhLog
-     public Result mindMap(@RequestParam("text") String text)   {
+     public Result mindMap(@RequestParam("text") String text,HttpServletRequest request)   {
          String s = userService.mindMap(text);
+         Long userId  = Long.valueOf(request.getHeader("userId"));
         if (s == null) {
+            createApiCalls("思维导图",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("思维导图",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
 
      }
@@ -305,13 +384,15 @@ public class AiController {
     @PostMapping("/paperReview")
     @ApiOperation("论文评审")
     @LzhLog
-    public Result paperReview(@RequestBody PaperReviewRequestDTO request) {
+    public Result paperReview(@RequestBody PaperReviewRequestDTO request,HttpServletRequest requests) {
         String text = request.getText();
-
+        Long userId = Long.valueOf(requests.getHeader("userId"));
         String s = userService.paperReview(text);
         if (s == null) {
+            createApiCalls("论文评审",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR, ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("论文评审",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
     }
 
@@ -322,12 +403,36 @@ public class AiController {
      @PostMapping("/aiDocumentAssistant")
      @ApiOperation("AI文档助手")
      @LzhLog
-     public Result aiDocumentAssistant(@RequestParam("problem") String text,@RequestParam("document") String documentUrl)   {
+     public Result aiDocumentAssistant(@RequestParam("problem") String text, @RequestParam("document") String documentUrl, HttpServletRequest request){
+         Long userId = Long.valueOf(request.getHeader("userId"));
          String s = userService.aiDocumentAssistant(text,documentUrl);
         if (s == null) {
+            createApiCalls("AI文档助手",userId,ErrorCode.NETWORK_ERROR.getCode());
             return Result.error(MessageConstant.NETWORK_ERROR,ErrorCode.NETWORK_ERROR.getCode());
         }
+        createApiCalls("AI文档助手",userId,ErrorCode.SUCCESS.getCode());
         return Result.success(s, ErrorCode.SUCCESS.getCode(), MessageConstant.SUCCESSFUL);
      }
 
+
+     @ApiOperation("测试")
+     @LzhLog
+     @PostMapping("/hot")
+     public Result test()   {
+         return Result.success(userService.fetchToutiaoHot());
+     }
+     private boolean createApiCalls(String aiName,Long userId,Integer statusCode){
+         // 根据接口名字找到接口信息
+         ApiInfo apiInfo = apiInfoService.findByName(aiName);
+         if (apiInfo == null) {
+             return false;
+         }
+         // 保存调用记录
+         ApiCalls apiCall = new ApiCalls();
+         apiCall.setApiId(apiInfo.getId());
+         apiCall.setUserId(userId);
+         apiCall.setStatusCode(statusCode);
+         apiCallsService.save(apiCall);
+         return true;
+     }
 }

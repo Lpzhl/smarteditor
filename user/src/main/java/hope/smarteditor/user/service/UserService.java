@@ -2,10 +2,13 @@ package hope.smarteditor.user.service;
 
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import hope.smarteditor.common.model.dto.RegisterDTO;
 import hope.smarteditor.common.model.dto.UserLoginDTO;
 import hope.smarteditor.common.model.entity.User;
 import hope.smarteditor.common.model.vo.BaiduResultVO;
 import hope.smarteditor.common.model.vo.OcrVO;
+import hope.smarteditor.common.model.vo.UserStatisticsVO;
+import hope.smarteditor.common.model.vo.UserVO;
 import io.minio.errors.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
@@ -14,6 +17,7 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.Map;
 
 /**
 * @author LoveF
@@ -28,7 +32,7 @@ public interface UserService extends IService<User> {
 
     boolean updateUser(User user);
 
-    boolean register(User user);
+    boolean register(RegisterDTO registerDTO);
 
     OcrVO ocr(MultipartFile file) throws NoSuchAlgorithmException, InvalidKeyException, IOException, ServerException, InsufficientDataException, ErrorResponseException, InvalidResponseException, XmlParserException, InternalException, MinioException;
 
@@ -46,9 +50,9 @@ public interface UserService extends IService<User> {
 
     List<BaiduResultVO> baidu(String text);
 
-    String ocrTable(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException;
+    OcrVO ocrTable(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException;
 
-    String asr(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException;
+    OcrVO asr(MultipartFile file) throws IOException, ServerException, InsufficientDataException, ErrorResponseException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException;
 
     String createChart(String text);
 
@@ -67,4 +71,18 @@ public interface UserService extends IService<User> {
     User findByUsername(String username);
 
     String translate(String text);
+
+    User authenticate(String username, String password);
+    List<Map<String, String>> fetchToutiaoHot();
+    String mindMap(String text);
+
+    String paperReview(String text);
+
+    String aiDocumentAssistant(String text, String documentUrl);
+
+    UserStatisticsVO getUsersCount();
+
+    void updateUserStatus(Long userId);
+
+    List<UserVO> getUserList();
 }
