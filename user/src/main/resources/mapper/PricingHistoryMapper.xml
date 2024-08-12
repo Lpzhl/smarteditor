@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hope.smarteditor.user.mapper.PricingHistoryMapper">
+
+    <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.PricingHistory">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="pricingId" column="pricing_id" jdbcType="BIGINT"/>
+            <result property="oldPrice" column="old_price" jdbcType="DECIMAL"/>
+            <result property="newPrice" column="new_price" jdbcType="DECIMAL"/>
+            <result property="changedAt" column="changed_at" jdbcType="TIMESTAMP"/>
+            <result property="changedBy" column="changed_by" jdbcType="VARCHAR"/>
+            <result property="oldValue" column="old_value" jdbcType="INTEGER"/>
+            <result property="newValue" column="new_value" jdbcType="INTEGER"/>
+            <result property="describe" column="describe" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,pricing_id,old_price,
+        new_price,changed_at,changed_by,
+        old_value,new_value,describe
+    </sql>
+</mapper>

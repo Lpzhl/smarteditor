@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hope.smarteditor.user.mapper.PricingMapper">
+
+    <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.Pricing">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="itemType" column="item_type" jdbcType="VARCHAR"/>
+            <result property="itemValue" column="item_value" jdbcType="INTEGER"/>
+            <result property="price" column="price" jdbcType="DECIMAL"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="INTEGER"/>
+            <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+            <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,item_type,item_value,is_deleted,
+        price,created_at,updated_at
+    </sql>
+</mapper>

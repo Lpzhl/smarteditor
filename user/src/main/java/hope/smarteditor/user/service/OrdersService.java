@@ -4,7 +4,11 @@ import hope.smarteditor.common.model.dto.OrderBuyPointsDTO;
 import hope.smarteditor.common.model.dto.OrderBuyVipDTO;
 import hope.smarteditor.common.model.entity.Orders;
 import com.baomidou.mybatisplus.extension.service.IService;
+import hope.smarteditor.common.model.vo.TotalSalesVO;
+import hope.smarteditor.common.model.vo.UnpaidOrdersVO;
 import hope.smarteditor.common.result.Result;
+
+import java.util.List;
 
 /**
 * @author LoveF
@@ -22,4 +26,12 @@ public interface OrdersService extends IService<Orders> {
     Result createOrderBuyVip(OrderBuyVipDTO orderBuyVipDTO);
 
     void updateOrderStatus(int parseInt, String status);
+
+    boolean deleteOrder(String orderId);
+
+    List<TotalSalesVO> getScoreAndSales();
+
+    List<UnpaidOrdersVO> getUnpaidOrders();
+
 }
+
