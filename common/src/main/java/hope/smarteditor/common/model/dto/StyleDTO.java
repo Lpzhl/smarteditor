@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.util.List;
 
 @Data
-public class StyleEditDTO implements Serializable {
+public class StyleDTO implements Serializable {
     /**
      * 样式ID
      */
@@ -26,4 +26,5 @@ public class StyleEditDTO implements Serializable {
      * 文字样式集合
      */
     private List<FontSettingsDTO> fontSettings;
+
 }
