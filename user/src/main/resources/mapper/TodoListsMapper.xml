@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hope.smarteditor.user.mapper.TodoListsMapper">
+
+    <resultMap id="BaseResultMap" type="hope.smarteditor.common.model.entity.TodoLists">
+            <id property="listId" column="list_id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="listName" column="list_name" jdbcType="VARCHAR"/>
+            <result property="isCompleted" column="is_completed" jdbcType="TINYINT"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        list_id,user_id,list_name,
+        is_completed,is_deleted
+    </sql>
+</mapper>

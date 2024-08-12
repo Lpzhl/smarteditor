@@ -3,6 +3,9 @@ package hope.smarteditor.user.mapper;
 import hope.smarteditor.common.model.entity.Orders;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
 
 /**
 * @author LoveF
@@ -12,6 +15,9 @@ import org.apache.ibatis.annotations.Mapper;
 */
 @Mapper
 public interface OrdersMapper extends BaseMapper<Orders> {
+
+    @Select("SELECT * FROM orders WHERE status = '已支付' AND is_deleted = 0")
+    List<Orders> getPaidOrders();
 
 }
 
