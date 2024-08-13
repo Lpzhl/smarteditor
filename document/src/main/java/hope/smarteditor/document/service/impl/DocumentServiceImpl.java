@@ -4,24 +4,23 @@ package hope.smarteditor.document.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hope.smarteditor.api.UserDubboService;
 import hope.smarteditor.common.constant.ErrorCode;
 import hope.smarteditor.common.exception.BusinessException;
-import hope.smarteditor.common.exception.GlobalExceptionHandler;
 import hope.smarteditor.common.model.dto.DocumentUpdateDTO;
 import hope.smarteditor.common.model.dto.DocumentUploadDTO;
 import hope.smarteditor.common.model.dto.TemplateDocumentUpdateDTO;
 import hope.smarteditor.common.model.entity.*;
 import hope.smarteditor.common.model.vo.*;
+import hope.smarteditor.document.config.RedisService;
 import hope.smarteditor.document.mapper.*;
 import hope.smarteditor.document.service.DocumentService;
-import hope.smarteditor.document.service.FolderService;
 import io.minio.*;
 import io.minio.errors.MinioException;
 import io.minio.http.Method;
 import org.apache.dubbo.config.annotation.DubboReference;
-import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -62,6 +61,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -146,16 +146,14 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
      */
     @Override
     public Document saveDocument(DocumentUploadDTO documentUploadDTO) {
-
-        documentUploadDTO.setContent("默认文本");
+        // 构建文档信息
+        if (documentUploadDTO.getContent() == null) {
+            documentUploadDTO.setContent("默认文本");
+        }
 
         Document document = new Document();
         document.setUserId(documentUploadDTO.getUserId());
-        if(documentUploadDTO.getName() == null){
-            document.setName("未命名文档");
-        }else{
-            document.setName(documentUploadDTO.getName());
-        }
+        document.setName(documentUploadDTO.getName() == null ? "未命名文档" : documentUploadDTO.getName());
         document.setContent(documentUploadDTO.getContent());
         document.setSummary(documentUploadDTO.getSummary());
         document.setType(documentUploadDTO.getType());
@@ -166,8 +164,117 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         document.setCreateTime(new Date());
         document.setUpdateTime(new Date());
 
+        // 插入文档到数据库
         int insert = documentMapper.insert(document);
+        if (insert == 0) {
+            throw new BusinessException(ErrorCode.SAVE_FILE_ERROR);
+        }
 
+        // 获取插入后的文档
+        Document savedDocument = documentMapper.selectById(document.getId());
+
+        // 设置文档权限
+        setDocumentPermissions(savedDocument);
+
+        // 保存文档版本
+        saveDocumentVersion(savedDocument);
+
+        // 更新缓存
+        try {
+            updateDocumentCache(savedDocument.getUserId(), savedDocument);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // 保存到用户选择的文件夹或默认文件夹
+        saveToFolder(documentUploadDTO, savedDocument);
+
+        // 添加操作日志
+        addFolderOperationLog(savedDocument);
+
+        return savedDocument;
+    }
+
+    private void setDocumentPermissions(Document document) {
+        Documentpermissions documentpermissions = new Documentpermissions();
+        documentpermissions.setDocumentId(document.getId());
+        documentpermissions.setUserId(document.getUserId());
+        documentpermissions.setPermissionId(1L); // 设置为创建者，权限为可编辑
+        documentpermissionsMapper.insert(documentpermissions);
+    }
+
+    private void saveDocumentVersion(Document document) {
+        DocumentVersion documentVersion = new DocumentVersion();
+        documentVersion.setDocumentId(document.getId());
+        documentVersion.setVersion(getNextVersionNumber(document.getId()));
+        documentVersion.setContent(document.getContent());
+        documentVersion.setSummary(document.getSummary());
+        documentVersion.setUsername(userDubboService.getUserNameByUserId(document.getUserId()));
+        documentVersion.setUpdateTime(new Date());
+        documentVersionMapper.insert(documentVersion);
+    }
+
+    private void saveToFolder(DocumentUploadDTO documentUploadDTO, Document document) {
+        Long folderId;
+        if (documentUploadDTO.getFolderId() != null) {
+            // 用户选择了文件夹，使用用户选择的文件夹
+            folderId = documentUploadDTO.getFolderId();
+        } else {
+            // 用户没有选择文件夹，默认使用默认文件夹
+            folderId = getDefaultFolderId(document.getUserId());
+        }
+
+        DocumentFolder documentFolder = new DocumentFolder();
+        documentFolder.setDocumentId(document.getId());
+        documentFolder.setFolderId(folderId);
+        documentFolderMapper.insert(documentFolder);
+    }
+
+    private Long getDefaultFolderId(Long userId) {
+        LambdaQueryWrapper<Folder> folderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        folderLambdaQueryWrapper.eq(Folder::getUserId, userId);
+        folderLambdaQueryWrapper.eq(Folder::getName, DEF);
+        Folder folder = folderMapper.selectOne(folderLambdaQueryWrapper);
+
+        if (folder == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        return folder.getId();
+    }
+
+    private void addFolderOperationLog(Document document) {
+        FolderOperationLog folderOperationLog = new FolderOperationLog();
+        folderOperationLog.setUserId(document.getUserId());
+        folderOperationLog.setFolderId(getDefaultFolderId(document.getUserId()));
+        folderOperationLog.setDocumentId(document.getId());
+        folderOperationLog.setOperation("插入");
+        folderOperationLog.setDocumentName(document.getName());
+        folderOperationLogMapper.insert(folderOperationLog);
+    }
+
+ /*   @Override
+    public Document saveDocument(DocumentUploadDTO documentUploadDTO) {
+        // 构建文档信息
+        if(documentUploadDTO.getContent() == null){
+            documentUploadDTO.setContent("默认文本");
+        }
+
+        Document document = new Document();
+        document.setUserId(documentUploadDTO.getUserId());
+        document.setName(documentUploadDTO.getName() == null ? "未命名文档" : documentUploadDTO.getName());
+        document.setContent(documentUploadDTO.getContent());
+        document.setSummary(documentUploadDTO.getSummary());
+        document.setType(documentUploadDTO.getType());
+        document.setLabel(documentUploadDTO.getLabel());
+        document.setStatus(documentUploadDTO.getStatus());
+        document.setCategory(documentUploadDTO.getCategory());
+        document.setSubject(documentUploadDTO.getSubject());
+        document.setCreateTime(new Date());
+        document.setUpdateTime(new Date());
+
+        // 插入文档到数据库
+        int insert = documentMapper.insert(document);
         if (insert == 0) {
             throw new BusinessException(ErrorCode.SAVE_FILE_ERROR);
         }
@@ -181,7 +288,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         documentpermissions.setPermissionId(1L); // 设置为创建者，权限为可编辑
         documentpermissionsMapper.insert(documentpermissions);
 
-        // 保存旧版本到文档版本表
+        // 保存文档版本
         DocumentVersion documentVersion = new DocumentVersion();
         documentVersion.setDocumentId(document.getId());
         documentVersion.setVersion(getNextVersionNumber(document.getId()));
@@ -191,22 +298,17 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         documentVersion.setUpdateTime(new Date());
         documentVersionMapper.insert(documentVersion);
 
-        // 更新cacheKey1
-        String cacheKey1 = "user:" + document.getUserId() + ":documents";
-        List<Document> userDocuments = (List<Document>) redisTemplate.opsForValue().get(cacheKey1);
-        if (userDocuments != null) {
-            userDocuments.add(savedDocument);
-            redisTemplate.opsForValue().set(cacheKey1, userDocuments);
-            redisTemplate.expire(cacheKey1, 7, TimeUnit.DAYS);
+        // 更新缓存
+        try {
+            updateDocumentCache(document.getUserId(), savedDocument);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
 
-        // 保存到Redis中，以文档的ID作为key
-        String cacheKey = "document:" + document.getId();
-        redisTemplate.opsForValue().set(cacheKey, savedDocument);
-        // 设置缓存过期时间，例如1小时
-        redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
 
-        // 搜索该用户的默认文件夹并且 添加到默认文件夹中
+        // todo 如果用户选择了文件夹documentUploadDTO.getFolderId()那就保存到相应的文件夹中   如果用户没有选择文件夹，则默认添加到默认文件夹中
+
+        // 搜索该用户的默认文件夹并添加到默认文件夹中
         DocumentFolder documentFolder = new DocumentFolder();
         documentFolder.setDocumentId(document.getId());
         LambdaQueryWrapper<Folder> folderLambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -226,7 +328,47 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         folderOperationLogMapper.insert(folderOperationLog);
 
         return savedDocument;
+    }*/
+
+    private void updateDocumentCache(Long userId, Document document) throws Exception {
+        String cacheKey = "documents:user:" + userId;
+
+        // 获取当前缓存的数据
+        List<Object> cachedDocuments = (List<Object>) redisTemplate.opsForValue().get(cacheKey);
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<DocumentInfoVO> documents = new ArrayList<>();
+
+        if (cachedDocuments != null) {
+            documents = cachedDocuments.stream()
+                    .map(obj -> objectMapper.convertValue(obj, DocumentInfoVO.class))
+                    .collect(Collectors.toList());
+        }
+
+        // 构建新的 DocumentInfoVO
+        DocumentInfoVO newDocumentInfoVO = new DocumentInfoVO();
+        BeanUtils.copyProperties(document, newDocumentInfoVO);
+        newDocumentInfoVO.setCreateUserNickname(userDubboService.getUserInfoByUserId(document.getUserId()).getNickname());
+        newDocumentInfoVO.setIsFavorite(checkIfDocumentIsFavorited(String.valueOf(userId), document.getId()));
+
+        // 获取文档的所在文件夹 如果没有则为默认文件夹
+        LambdaQueryWrapper<DocumentFolder> documentFolderLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        documentFolderLambdaQueryWrapper.eq(DocumentFolder::getDocumentId, document.getId());
+        DocumentFolder documentFolder = documentFolderMapper.selectOne(documentFolderLambdaQueryWrapper);
+        if (documentFolder != null) {
+            String name = folderMapper.selectById(documentFolder.getFolderId()).getName();
+            newDocumentInfoVO.setOriginalFolder(name);
+        } else {
+            newDocumentInfoVO.setOriginalFolder(DEF);
+        }
+
+        // 将新的 DocumentInfoVO 添加到缓存列表中
+        documents.add(newDocumentInfoVO);
+
+        // 更新缓存
+        redisTemplate.opsForValue().set(cacheKey, documents);
+        redisTemplate.expire(cacheKey, 7, TimeUnit.HOURS);
     }
+
 
 
 
@@ -304,7 +446,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         // 更新Redis中缓存的信息
         String cacheKey = "document:" + documentId;
         redisTemplate.opsForValue().set(cacheKey, document);
-        redisTemplate.expire(cacheKey, 7, TimeUnit.DAYS);
+        redisTemplate.expire(cacheKey, 7, TimeUnit.HOURS);
 
         return document;
     }
@@ -333,23 +475,52 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
 
     @Override
+    @Transactional
     public boolean deleteDocument(Long documentId) {
         Document document = documentMapper.selectById(documentId);
         if (document == null) {
             return false;
         }
 
-        // 执行逻辑删除  并且设置删除时间
+        // 获取文档所在文件夹的ID
+        Long folderId =documentFolderMapper.selectOne(new QueryWrapper<DocumentFolder>().eq("document_id", documentId)).getFolderId();
+        Long userId = document.getUserId();
+
+        // 删除文档文件夹关联记录
+        documentFolderMapper.delete(new QueryWrapper<DocumentFolder>().eq("document_id", documentId).eq("folder_id", folderId));
+
+        // 执行逻辑删除 并且设置删除时间
         int i = documentMapper.deleteById(documentId);
 
         // 删除最近文档的记录
         LambdaQueryWrapper<RecentDocuments> recentDocumentsLambdaQueryWrapper = new LambdaQueryWrapper<>();
         recentDocumentsLambdaQueryWrapper.eq(RecentDocuments::getDocumentId, documentId);
         recentDocumentsMapper.delete(recentDocumentsLambdaQueryWrapper);
+        try {
+            removeDocumentFromCache(userId,documentId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         if (i > 0) {
+            // 新增操作日志
+            FolderOperationLog operationLog = new FolderOperationLog();
+            operationLog.setFolderId(folderId);
+            operationLog.setOperation("删除");
+            operationLog.setUserId(userId);
+            operationLog.setDocumentName(document.getName());
+            operationLog.setDocumentId(documentId);
+            folderOperationLogMapper.insert(operationLog);
+
+            // 插入回收站
+            DeletedInfo deletedInfo = new DeletedInfo();
+            deletedInfo.setDocumentId(documentId);
+            deletedInfo.setUserId(userId);
+            deletedInfo.setOriginalFolderId(folderId);
+            deletedInfoMapper.insert(deletedInfo);
+
             // 删除cacheKey1中的文档信息
-            String cacheKey1 = "user:" + document.getUserId() + ":documents";
+            String cacheKey1 = "user:" + userId + ":documents";
             List<Object> userDocumentsRaw = (List<Object>) redisTemplate.opsForValue().get(cacheKey1);
             if (userDocumentsRaw != null) {
                 List<Document> userDocuments = userDocumentsRaw.stream()
@@ -367,6 +538,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
         return i > 0;
     }
+
 
 
 
@@ -411,11 +583,67 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
      */
     @Override
     public List<DocumentInfoVO> getDeletedDocuments(Long userId) {
+        // 获取逻辑删除的文档列表
         List<Document> deletedDocuments = documentMapper.getDeletedDocuments(userId);
-        List<DocumentInfoVO> documentInfoVOS = deletedDocuments.stream()
-                .map(document -> convertToDocumentInfoVO(document, userId))
-                .collect(Collectors.toList());
-        return documentInfoVOS;
+
+        if (deletedDocuments.isEmpty()) {
+            return Collections.emptyList();  // 如果没有删除的文档，返回空列表
+        }
+
+        // 获取文档 ID 列表
+        Set<Long> documentIds = deletedDocuments.stream()
+                .map(Document::getId)
+                .collect(Collectors.toSet());
+
+        // 批量查询删除信息
+        Map<Long, DeletedInfo> deletedInfoMap = deletedInfoMapper.selectList(
+                new LambdaQueryWrapper<DeletedInfo>().in(DeletedInfo::getDocumentId, documentIds)
+        ).stream().collect(Collectors.toMap(DeletedInfo::getDocumentId, deletedInfo -> deletedInfo));
+
+        // 批量查询用户信息
+        Map<Long, User> userMap = deletedDocuments.stream()
+                .map(Document::getUserId)
+                .distinct()
+                .collect(Collectors.toMap(
+                        userId1 -> userId1,
+                        userDubboService::getUserInfoByUserId
+                ));
+
+        // 批量查询文件夹信息
+        Map<Long, String> folderMap = documentFolderMapper.selectList(
+                new LambdaQueryWrapper<DocumentFolder>().in(DocumentFolder::getDocumentId, documentIds)
+        ).stream().collect(Collectors.toMap(
+                DocumentFolder::getDocumentId,
+                df -> folderMapper.selectById(df.getFolderId()).getName()
+        ));
+
+        // 转换为 DocumentInfoVO
+        return deletedDocuments.stream().map(document -> {
+            DocumentInfoVO documentInfoVO = new DocumentInfoVO();
+            BeanUtils.copyProperties(document, documentInfoVO);
+
+            // 设置删除时间
+            DeletedInfo deletedInfo = deletedInfoMap.get(document.getId());
+            if (deletedInfo != null) {
+                documentInfoVO.setUpdateTime(deletedInfo.getDeletionTime());
+            }
+
+            // 设置用户昵称
+            User userInfo = userMap.get(document.getUserId());
+            if (userInfo != null) {
+                documentInfoVO.setCreateUserNickname(userInfo.getNickname());
+            }
+
+            // 设置是否收藏
+            boolean isFavorited = checkIfDocumentIsFavorited(String.valueOf(userId), document.getId());
+            documentInfoVO.setIsFavorite(isFavorited);
+
+            // 设置文件夹名称
+            String folderName = folderMap.get(document.getId());
+            documentInfoVO.setOriginalFolder(folderName != null ? folderName : DEF);
+
+            return documentInfoVO;
+        }).collect(Collectors.toList());
     }
 
     private DocumentInfoVO convertToDocumentInfoVO(Document document, Long userId) {
@@ -443,6 +671,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
         return documentInfoVO;
     }
+
+
     @Override
     public List<DocumentUserPermisssVO> getParticipants(Long documentId) {
         // 查询文档对象
@@ -524,7 +754,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         @Override
         public void setDocumentAsTemplate(Long documentId,Long userId)  {
             QueryWrapper<Document> documentQueryWrapper = new QueryWrapper<>();
-            documentQueryWrapper.eq("id", documentId);
+            documentQueryWrapper.eq("id", documentId).eq("user_id", userId);
             Document document = documentMapper.selectOne(documentQueryWrapper);
 
             TemplateDocument templateDocument = new TemplateDocument();
@@ -536,48 +766,202 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
 
     }
 
-
     @Override
     public List<DocumentShareInVO> getDocumentShare(Long userId) {
-        // 获取用户的所有最近文档
-        List<RecentDocuments> recentDocuments = recentDocumentsMapper.selectList(new QueryWrapper<RecentDocuments>().eq("user_id", userId));
+        // 使用recent_docs缓存键
+        String recentDocsCacheKey = "recent_docs:" + userId;
+        String recentDocsInfoVOKey = "recent_docsInfoVO:" + userId;
 
-        if (recentDocuments.isEmpty()) {
-            return Collections.emptyList(); // 如果没有最近文档，则直接返回空列表
+        List<DocumentShareInVO> documentShareInVOList = new ArrayList<>();
+
+        // 从 `recent_docsInfoVO` 缓存中获取缓存的 DocumentInfoVO 列表
+        String cachedDocumentInfoVOsJson = (String) redisTemplate.opsForValue().get(recentDocsInfoVOKey);
+        List<DocumentInfoVO> documentInfoVOs = new ArrayList<>();
+
+        if (cachedDocumentInfoVOsJson != null) {
+            try {
+                documentInfoVOs = deserializeDocumentInfoVOList(cachedDocumentInfoVOsJson);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        // 获取最近文档的documentId列表
-        List<Long> documentIds = recentDocuments.stream()
-                .map(RecentDocuments::getDocumentId)
-                .collect(Collectors.toList());
+        if (!documentInfoVOs.isEmpty()) {
+            // 使用Map分类文档
+            Map<Boolean, List<DocumentInfoVO>> categorizedDocuments = documentInfoVOs.stream()
+                    .collect(Collectors.partitioningBy(doc -> doc.getUserId().equals(userId)));
 
-        // 根据documentId获取文档信息
-        List<Document> documents = documentMapper.selectList(new QueryWrapper<Document>().in("id", documentIds));
+            // 创建DocumentShareInVO对象
+            DocumentShareInVO sentDocumentShareInVO = new DocumentShareInVO();
+            sentDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(true, Collections.emptyList()));
+            sentDocumentShareInVO.setCategory("我的分享");
 
-        // 使用Map分类文档
-        Map<Boolean, List<Document>> categorizedDocuments = documents.stream()
-                .collect(Collectors.partitioningBy(doc -> doc.getUserId().equals(userId)));
+            DocumentShareInVO receivedDocumentShareInVO = new DocumentShareInVO();
+            receivedDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(false, Collections.emptyList()));
+            receivedDocumentShareInVO.setCategory("我的接收");
 
-        // 创建DocumentShareInVO对象
-        DocumentShareInVO sentDocumentShareInVO = new DocumentShareInVO();
-        sentDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(true, Collections.emptyList()).stream()
-                .map(doc -> convertToDocumentInfoVO(doc, userId))
-                .collect(Collectors.toList()));
-        sentDocumentShareInVO.setCategory("我的分享");
+            // 将两个对象添加到列表中
+            documentShareInVOList.add(sentDocumentShareInVO);
+            documentShareInVOList.add(receivedDocumentShareInVO);
+        } else {
+            synchronized (this) {  // 加锁防止缓存击穿
+                // 再次检查缓存
+                cachedDocumentInfoVOsJson = (String) redisTemplate.opsForValue().get(recentDocsInfoVOKey);
+                if (cachedDocumentInfoVOsJson == null || cachedDocumentInfoVOsJson.isEmpty()) {
+                    // 获取用户的所有最近文档
+                    List<RecentDocuments> recentDocuments = recentDocumentsMapper.selectList(
+                            new QueryWrapper<RecentDocuments>().eq("user_id", userId));
 
-        DocumentShareInVO receivedDocumentShareInVO = new DocumentShareInVO();
-        receivedDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(false, Collections.emptyList()).stream()
-                .map(doc -> convertToDocumentInfoVO(doc, userId))
-                .collect(Collectors.toList()));
-        receivedDocumentShareInVO.setCategory("我的接收");
+                    if (recentDocuments.isEmpty()) {
+                        return Collections.emptyList(); // 如果没有最近文档，则直接返回空列表
+                    }
 
-        // 将两个对象添加到列表中并返回
-        List<DocumentShareInVO> documentShareInVOList = new ArrayList<>();
-        documentShareInVOList.add(sentDocumentShareInVO);
-        documentShareInVOList.add(receivedDocumentShareInVO);
+                    List<Long> documentIds = recentDocuments.stream()
+                            .map(RecentDocuments::getDocumentId)
+                            .collect(Collectors.toList());
+
+                    // 根据documentId获取文档信息
+                    List<Document> documents = documentMapper.selectList(
+                            new QueryWrapper<Document>().in("id", documentIds));
+
+                    // 对 documentInfoVOs 列表按照 updateTime 进行排序
+                    documentInfoVOs.sort(Comparator.comparing(DocumentInfoVO::getUpdateTime).reversed());
+
+                    // 将获取到的文档信息转换为DocumentInfoVO对象
+                    documentInfoVOs = documents.stream()
+                            .map(doc -> convertToDocumentInfoVO(doc, userId))
+                            .collect(Collectors.toList());
+
+                    // 序列化并缓存 DocumentInfoVO 列表
+                    String updatedDocumentInfoVOsJson = null;
+                    try {
+                        updatedDocumentInfoVOsJson = serializeDocumentInfoVOList(documentInfoVOs);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    redisTemplate.opsForValue().set(recentDocsInfoVOKey, updatedDocumentInfoVOsJson, 7, TimeUnit.HOURS);
+
+                    // 使用Map分类文档
+                    Map<Boolean, List<DocumentInfoVO>> categorizedDocuments = documentInfoVOs.stream()
+                            .collect(Collectors.partitioningBy(doc -> doc.getUserId().equals(userId)));
+
+                    // 创建DocumentShareInVO对象
+                    DocumentShareInVO sentDocumentShareInVO = new DocumentShareInVO();
+                    sentDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(true, Collections.emptyList()));
+                    sentDocumentShareInVO.setCategory("我的分享");
+
+                    DocumentShareInVO receivedDocumentShareInVO = new DocumentShareInVO();
+                    receivedDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(false, Collections.emptyList()));
+                    receivedDocumentShareInVO.setCategory("我的接收");
+
+                    // 将两个对象添加到列表中
+                    documentShareInVOList.add(sentDocumentShareInVO);
+                    documentShareInVOList.add(receivedDocumentShareInVO);
+                }
+            }
+        }
+
 
         return documentShareInVOList;
     }
+
+
+/*    @Override
+    public List<DocumentShareInVO> getDocumentShare(Long userId) {
+        // 使用recent_docs缓存键
+        String recentDocsCacheKey = "recent_docs:" + userId;
+        List<Object> documentIdsObj = redisTemplate.opsForList().range(recentDocsCacheKey, 0, -1);
+
+        List<DocumentShareInVO> documentShareInVOList = new ArrayList<>();
+
+        if (documentIdsObj != null && !documentIdsObj.isEmpty()) {
+            // 将Object类型的ID列表转换为String类型
+            List<String> documentIdsStr = documentIdsObj.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.toList());
+
+            // 将字符串形式的ID转换为Long类型
+            List<Long> documentIds = documentIdsStr.stream()
+                    .map(Long::valueOf)
+                    .collect(Collectors.toList());
+
+            // 根据documentId获取文档信息
+            List<Document> documents = documentMapper.selectList(new QueryWrapper<Document>().in("id", documentIds));
+
+            // 使用Map分类文档
+            Map<Boolean, List<Document>> categorizedDocuments = documents.stream()
+                    .collect(Collectors.partitioningBy(doc -> doc.getUserId().equals(userId)));
+
+            // 创建DocumentShareInVO对象
+            DocumentShareInVO sentDocumentShareInVO = new DocumentShareInVO();
+            sentDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(true, Collections.emptyList()).stream()
+                    .map(doc -> convertToDocumentInfoVO(doc, userId))
+                    .collect(Collectors.toList()));
+            sentDocumentShareInVO.setCategory("我的分享");
+
+            DocumentShareInVO receivedDocumentShareInVO = new DocumentShareInVO();
+            receivedDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(false, Collections.emptyList()).stream()
+                    .map(doc -> convertToDocumentInfoVO(doc, userId))
+                    .collect(Collectors.toList()));
+            receivedDocumentShareInVO.setCategory("我的接收");
+
+            // 将两个对象添加到列表中
+            documentShareInVOList.add(sentDocumentShareInVO);
+            documentShareInVOList.add(receivedDocumentShareInVO);
+        } else {
+            synchronized (this) {  // 加锁防止缓存击穿
+                documentIdsObj = redisTemplate.opsForList().range(recentDocsCacheKey, 0, -1);
+                if (documentIdsObj == null || documentIdsObj.isEmpty()) {
+                    // 获取用户的所有最近文档
+                    List<RecentDocuments> recentDocuments = recentDocumentsMapper.selectList(
+                            new QueryWrapper<RecentDocuments>().eq("user_id", userId));
+
+                    if (recentDocuments.isEmpty()) {
+                        return Collections.emptyList(); // 如果没有最近文档，则直接返回空列表
+                    }
+
+                    List<Long> documentIds = recentDocuments.stream()
+                            .map(RecentDocuments::getDocumentId)
+                            .collect(Collectors.toList());
+
+                    // 将Long类型的ID列表转换为字符串类型并更新Redis缓存
+                    List<String> documentIdsStr = documentIds.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.toList());
+                    redisTemplate.opsForList().rightPushAll(recentDocsCacheKey, documentIdsStr);
+                    redisTemplate.expire(recentDocsCacheKey, 7, TimeUnit.HOURS);
+
+                    // 根据documentId获取文档信息
+                    List<Document> documents = documentMapper.selectList(
+                            new QueryWrapper<Document>().in("id", documentIds));
+
+                    // 使用Map分类文档
+                    Map<Boolean, List<Document>> categorizedDocuments = documents.stream()
+                            .collect(Collectors.partitioningBy(doc -> doc.getUserId().equals(userId)));
+
+                    // 创建DocumentShareInVO对象
+                    DocumentShareInVO sentDocumentShareInVO = new DocumentShareInVO();
+                    sentDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(true, Collections.emptyList()).stream()
+                            .map(doc -> convertToDocumentInfoVO(doc, userId))
+                            .collect(Collectors.toList()));
+                    sentDocumentShareInVO.setCategory("我的分享");
+
+                    DocumentShareInVO receivedDocumentShareInVO = new DocumentShareInVO();
+                    receivedDocumentShareInVO.setDocuments(categorizedDocuments.getOrDefault(false, Collections.emptyList()).stream()
+                            .map(doc -> convertToDocumentInfoVO(doc, userId))
+                            .collect(Collectors.toList()));
+                    receivedDocumentShareInVO.setCategory("我的接收");
+
+                    // 将两个对象添加到列表中
+                    documentShareInVOList.add(sentDocumentShareInVO);
+                    documentShareInVOList.add(receivedDocumentShareInVO);
+                }
+            }
+        }
+
+        return documentShareInVOList;
+    }*/
+
 
 
 
@@ -595,9 +979,9 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
     @Override
     public SearchVO searchDocumentsByContent(String keyword, Long userId) {
         SearchVO searchVO = new SearchVO();
-        QueryWrapper<Document> documentQueryWrapper = new QueryWrapper<>();
-        documentQueryWrapper.like("content", keyword);
-        List<Document> documents = documentMapper.selectList(documentQueryWrapper);
+        LambdaQueryWrapper<Document> documentLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        documentLambdaQueryWrapper.like(Document::getContent, keyword).eq(Document::getUserId, userId);
+        List<Document> documents = documentMapper.selectList(documentLambdaQueryWrapper);
         searchVO.setDocuments(documents);
         return searchVO;
     }
@@ -622,6 +1006,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
             // 获取文档位置
             documentFolderMap.put(document.getId(),documentFolderMapper.selectOne(new QueryWrapper<DocumentFolder>().eq("document_id", document.getId())).getFolderId());
             documentUserMap.put(document.getId(), document.getUserId());
+            // 删除相关缓存
+            redisTemplate.delete("document:" + document.getId());
         }
 
         // 删除文档文件夹关联记录
@@ -634,6 +1020,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         LambdaQueryWrapper<RecentDocuments> recentDocumentsLambdaQueryWrapper = new LambdaQueryWrapper<>();
         recentDocumentsLambdaQueryWrapper.in(RecentDocuments::getDocumentId, documentIds);
         recentDocumentsMapper.delete(recentDocumentsLambdaQueryWrapper);
+
+
 
         // 新增操作日志并插入回收站
         for (Long documentId : documentIds) {
@@ -741,6 +1129,68 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document>
         documentOperationMapper.insert(documentOperation);
     }
 
+    private String serializeDocumentInfoVOList(List<DocumentInfoVO> documentInfoVOList) throws Exception {
+        return objectMapper.writeValueAsString(documentInfoVOList);
+    }
+
+    private List<DocumentInfoVO> deserializeDocumentInfoVOList(String json) throws Exception {
+        return objectMapper.readValue(json, new TypeReference<List<DocumentInfoVO>>() {});
+    }
+
+    public void removeDocumentFromCache(Long userId, Long documentId) throws Exception {
+        // 定义缓存键
+        String cacheKey = "recent_docs:" + userId;
+        String cacheInfoVOKey = "recent_docsInfoVO:" + userId;
+
+        System.out.println("redisTemplate = " + redisTemplate);
+
+        // 检查 recent_docs 缓存中是否存在指定的 documentId
+        List<Object> documentIdsObj = redisTemplate.opsForList().range(cacheKey, 0, -1);
+
+        // 增加日志记录和 null 检查
+        if (documentIdsObj == null) {
+            return;
+        }
+
+        if (documentIdsObj.isEmpty()) {
+            return;
+        }
+
+        // 将 Object 类型的列表转换为 String 类型的列表
+        List<String> documentIdsStr = documentIdsObj.stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+
+        if (!documentIdsStr.contains(String.valueOf(documentId))) {
+            return;
+        }
+
+        // 从 recent_docs 缓存中删除指定的 documentId
+        redisTemplate.opsForList().remove(cacheKey, 1, String.valueOf(documentId));
+
+        // 从 recent_docsInfoVO 缓存中删除对应的 DocumentInfoVO
+        String cachedDocumentInfoVOsJson = (String) redisTemplate.opsForValue().get(cacheInfoVOKey);
+
+        if (cachedDocumentInfoVOsJson != null) {
+            // 反序列化 JSON 字符串为 List<DocumentInfoVO>
+            List<DocumentInfoVO> cachedDocumentInfoVOs = deserializeDocumentInfoVOList(cachedDocumentInfoVOsJson);
+
+            // 过滤掉被删除的 DocumentInfoVO
+            List<DocumentInfoVO> updatedDocumentInfoVOs = cachedDocumentInfoVOs.stream()
+                    .filter(doc -> !doc.getId().equals(documentId))
+                    .collect(Collectors.toList());
+
+            // 更新缓存，如果删除后列表为空，可以选择删除整个缓存
+            if (updatedDocumentInfoVOs.isEmpty()) {
+                redisTemplate.delete(cacheInfoVOKey);
+            } else {
+                // 序列化 List<DocumentInfoVO> 为 JSON 字符串
+                String updatedDocumentInfoVOsJson = serializeDocumentInfoVOList(updatedDocumentInfoVOs);
+                redisTemplate.opsForValue().set(cacheInfoVOKey, updatedDocumentInfoVOsJson, 7, TimeUnit.HOURS);
+            }
+        } else {
+        }
+    }
 }
 
 
