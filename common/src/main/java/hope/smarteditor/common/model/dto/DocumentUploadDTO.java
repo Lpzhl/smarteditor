@@ -15,4 +15,5 @@ public class DocumentUploadDTO implements Serializable {
     private Integer status;
     private String subject;
     private String category;
+    private Long folderId;
 }
