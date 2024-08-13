@@ -11,6 +11,5 @@ public class TodoListsAddDTO implements Serializable {
      */
     private String listName;
 
-
-
+    private Long documentId;
 }
