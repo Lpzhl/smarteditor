@@ -8,7 +8,7 @@ class AiApplicationTests {
 
     @Test
     void contextLoads() {
-后即可兑换法国人gjk、的身份
+后即可兑换法国人gjk、的身份订房
     }
 睡大阿松大
 }
