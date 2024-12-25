@@ -5,7 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 class AiApplicationTests {
-
+lsy ihihi
     @Test
     void contextLoads() {
 后即可兑换法国人gjk、的身份订房ltt
