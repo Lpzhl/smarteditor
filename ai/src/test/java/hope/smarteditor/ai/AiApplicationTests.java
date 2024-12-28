@@ -6,7 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
   
 class AiApplicationTests {
-lsy ihihi
+lsy ihihishcfasf 
     @Test 
   撒旦萨芬的官员段首hkkhk
     void contextLoads() {
