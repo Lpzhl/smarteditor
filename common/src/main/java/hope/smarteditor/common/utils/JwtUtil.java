@@ -39,14 +39,14 @@ public class JwtUtil{
 
         return builder.compact();
     }
+
 /**
      * Token解密
-     *
+     *校验token是否正确与是否过期
      * @param secretKey jwt秘钥 此秘钥一定要保留好在服务端, 不能暴露出去, 否则sign就可以被伪造, 如果对接多个客户端建议改造成多个
      * @param token     加密后的token
      * @return
      */
-
     public static Claims parseJWT(String secretKey, String token) {
         // 得到DefaultJwtParser
         Claims claims = Jwts.parser()
@@ -56,6 +56,5 @@ public class JwtUtil{
                 .parseClaimsJws(token).getBody();
         return claims;
     }
-
 }
 
